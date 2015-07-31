@@ -31,6 +31,8 @@ public class NodeTask {
     private Protos.SlaveID slaveId;
     @JsonProperty
     private Protos.TaskStatus taskStatus;
+    @JsonProperty
+    private String taskPrefix;
 
     /**
      * Mesos executor for this node.
@@ -80,5 +82,13 @@ public class NodeTask {
 
     public void setExecutorInfo(Protos.ExecutorInfo executorInfo) {
         this.executorInfo = executorInfo;
+    }
+
+    public String getTaskPrefix() {
+      return taskPrefix;
+    }
+
+    public void setTaskPrefix(String taskPrefix) {
+      this.taskPrefix = taskPrefix;
     }
 }

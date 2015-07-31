@@ -16,16 +16,16 @@ class SchedulerUtilsSpec extends Specification {
         offer.getHostname() >> "hostname"
 
         expect:
-        returnValue == SchedulerUtils.isUniqueHostname(offer, tasks)
+        returnValue == SchedulerUtils.isUniqueHostname(offer, launchTask, tasks)
 
         where:
-        tasks                                              | returnValue
-        []                                                 | true
-        null                                               | true
-        createNodeTaskList("hostname")                     | false
-        createNodeTaskList("missinghost")                  | true
-        createNodeTaskList("missinghost1", "missinghost2") | true
-        createNodeTaskList("missinghost1", "hostname")     | false
+        tasks                                              | launchTask 					| returnValue
+        []                                                 | null							| true
+        null                                               | null							| true
+        createNodeTaskList("hostname")                     | createNodeTask("hostname") 	| false
+        createNodeTaskList("missinghost")                  | createNodeTask("hostname") 	| true
+        createNodeTaskList("missinghost1", "missinghost2") | createNodeTask("missinghost3")	| true
+        createNodeTaskList("missinghost1", "hostname")     | createNodeTask("hostname")		| false
 
     }
 
@@ -41,6 +41,7 @@ class SchedulerUtilsSpec extends Specification {
     NodeTask createNodeTask(String hostname) {
         def node = new NodeTask(new NMProfile("", 1, 1))
         node.hostname = hostname
+        node.taskPrefix = "nm"
         node
     }
 }

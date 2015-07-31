@@ -68,7 +68,7 @@ public class SchedulerState {
             return;
         }
         for (NodeTask node : nodes) {
-            Protos.TaskID taskId = Protos.TaskID.newBuilder().setValue(String.format("nm.%s.%s", node.getProfile().getName(), UUID.randomUUID()))
+            Protos.TaskID taskId = Protos.TaskID.newBuilder().setValue(String.format("%s.%s.%s", node.getTaskPrefix(), node.getProfile().getName(), UUID.randomUUID()))
                     .build();
             addTask(taskId, node);
             LOGGER.info("Marked taskId {} pending, size of pending queue {}", taskId.getValue(), this.pendingTasks.size());
@@ -201,6 +201,21 @@ public class SchedulerState {
         }
         return null;
     }
+
+    public Collection<NodeTask> getActiveTasksByType(String taskPrefix) {
+      List<NodeTask> activeNodeTasks = new ArrayList<>();
+      if (CollectionUtils.isNotEmpty(activeTasks)
+              && CollectionUtils.isNotEmpty(tasks.values())) {
+          for (Map.Entry<Protos.TaskID, NodeTask> entry : tasks.entrySet()) {
+            NodeTask nodeTask = entry.getValue();
+              if (activeTasks.contains(entry.getKey()) && 
+                  taskPrefix.equalsIgnoreCase(nodeTask.getTaskPrefix())) {
+                  activeNodeTasks.add(entry.getValue());
+              }
+          }
+      }
+      return activeNodeTasks;
+  }
 
     public synchronized Set<Protos.TaskID> getStagingTaskIds() {
         return Collections.unmodifiableSet(this.stagingTasks);

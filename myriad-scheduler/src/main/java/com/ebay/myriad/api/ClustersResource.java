@@ -17,12 +17,16 @@ package com.ebay.myriad.api;
 
 import com.codahale.metrics.annotation.Timed;
 import com.ebay.myriad.api.model.FlexDownClusterRequest;
+import com.ebay.myriad.api.model.FlexDownServiceRequest;
 import com.ebay.myriad.api.model.FlexUpClusterRequest;
+import com.ebay.myriad.api.model.FlexUpServiceRequest;
+import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.scheduler.MyriadOperations;
 import com.ebay.myriad.scheduler.NMProfileManager;
 import com.ebay.myriad.state.SchedulerState;
 import com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,6 +100,32 @@ public class ClustersResource {
 
     @Timed
     @PUT
+    @Path("/flexupservice")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response flexUpservice(FlexUpServiceRequest request) {
+        Preconditions.checkNotNull(request,
+                "request object cannot be null or empty");
+
+        LOGGER.info("Received Flexup a Service Request");
+
+
+        Integer instances = request.getInstances();
+        String profile = request.getProfile();
+
+        LOGGER.info("Instances: {}", instances);
+        LOGGER.info("Profile: {}", profile);
+
+        try {
+          this.myriadOperations.flexUpAService(instances, profile);
+        } catch (MyriadBadConfigurationException e) {
+          return Response.serverError().entity(e).build();
+        }
+        return Response.ok().build();
+    }
+
+    @Timed
+    @PUT
     @Path("/flexdown")
     @Produces(MediaType.TEXT_PLAIN)
     @Consumes(MediaType.APPLICATION_JSON)
@@ -143,6 +173,22 @@ public class ClustersResource {
         return this.schedulerState.getActiveTaskIds().size()
                 + this.schedulerState.getStagingTaskIds().size()
                 + this.schedulerState.getPendingTaskIds().size();
+    }
+
+    @Timed
+    @PUT
+    @Path("/flexdownservice")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response flexDownservice(FlexDownServiceRequest request) {
+        Preconditions.checkNotNull(request,
+                "request object cannot be null or empty");
+        try {
+          this.myriadOperations.flexDownAService(request.getInstances(), request.getServiceName());
+        } catch (MyriadBadConfigurationException e) {
+          return Response.serverError().entity(e).build();
+        }
+        return Response.ok().build();
     }
 
 }

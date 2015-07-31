@@ -15,9 +15,9 @@
  */
 package com.ebay.myriad.scheduler.event.handlers;
 
-import com.ebay.myriad.scheduler.NMPorts;
 import com.ebay.myriad.scheduler.NMProfile;
 import com.ebay.myriad.scheduler.SchedulerUtils;
+import com.ebay.myriad.scheduler.TaskConstraints;
 import com.ebay.myriad.scheduler.TaskFactory;
 import com.ebay.myriad.scheduler.TaskUtils;
 import com.ebay.myriad.scheduler.event.ResourceOffersEvent;
@@ -27,6 +27,7 @@ import com.ebay.myriad.state.SchedulerState;
 import com.lmax.disruptor.EventHandler;
 
 import java.util.Iterator;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.mesos.Protos;
 import org.apache.mesos.Protos.Offer;
@@ -60,10 +61,10 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
   private SchedulerState schedulerState;
 
   @Inject
-  private TaskFactory taskFactory;
+  private TaskUtils taskUtils;
 
   @Inject
-  private TaskUtils taskUtils;
+  private Map<String, TaskFactory> taskFactoryMap;
 
   @Inject
   private OfferLifecycleManager offerLifecycleMgr;
@@ -85,14 +86,15 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
           for (Protos.TaskID pendingTaskId : pendingTasks) {
             NodeTask taskToLaunch = schedulerState
                 .getTask(pendingTaskId);
+            String taskPrefix = taskToLaunch.getTaskPrefix();
             NMProfile profile = taskToLaunch.getProfile();
 
-            if (matches(offer, profile)
-                && SchedulerUtils.isUniqueHostname(offer,
+            if (matches(offer, taskToLaunch)
+                && SchedulerUtils.isUniqueHostname(offer, taskToLaunch,
                 schedulerState.getActiveTasks())) {
-              TaskInfo task = taskFactory.createTask(offer, schedulerState.getFrameworkID(), pendingTaskId,
-                  taskToLaunch);
-
+              final TaskInfo task = 
+                    taskFactoryMap.get(taskPrefix).createTask(offer, schedulerState.getFrameworkID(), pendingTaskId,
+                    taskToLaunch);
               List<OfferID> offerIds = new ArrayList<>();
               offerIds.add(offer.getId());
               List<TaskInfo> tasks = new ArrayList<>();
@@ -136,7 +138,7 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
     }
   }
 
-  private boolean matches(Offer offer, NMProfile profile) {
+  private boolean matches(Offer offer, NodeTask taskToLaunch) {
     Map<String, Object> results = new HashMap<String, Object>(5);
 
     for (Resource resource : offer.getResourcesList()) {
@@ -155,27 +157,30 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
     checkResource(mem < 0, "mem");
     checkResource(ports < 0, "port");
 
-    return checkAggregates(offer, profile, ports, cpus, mem);
+    return checkAggregates(offer, taskToLaunch, ports, cpus, mem);
   }
+
+    private boolean checkAggregates(Offer offer, NodeTask taskToLaunch, int ports, double cpus, double mem) {
+        Map<String, String> requestAttributes = new HashMap<>();
+        final String taskPrefix = taskToLaunch.getTaskPrefix();
+        final double aggrCpu = taskUtils.getAuxTaskCpus(taskToLaunch.getProfile(), taskPrefix);
+        final double aggrMem = taskUtils.getAuxTaskMemory(taskToLaunch.getProfile(), taskPrefix);
+        final TaskConstraints taskConstraints = taskFactoryMap.get(taskPrefix).getConstraints();
+        if (aggrCpu <= cpus
+                && aggrMem <= mem
+                && SchedulerUtils.isMatchSlaveAttributes(offer, requestAttributes)
+                && taskConstraints.portsCount() <= ports) {
+            return true;
+        } else {
+            LOGGER.info("Offer not sufficient for task with, cpu: {}, memory: {}, ports: {}",
+                aggrCpu, aggrMem, ports);
+            return false;
+        }
+    }
 
   private void checkResource(boolean fail, String resource) {
     if (fail) {
       LOGGER.info("No " + resource + " resources present");
-    }
-  }
-
-  private boolean checkAggregates(Offer offer, NMProfile profile, int ports, double cpus, double mem) {
-    Map<String, String> requestAttributes = new HashMap<>();
-
-    if (taskUtils.getAggregateCpus(profile) <= cpus
-        && taskUtils.getAggregateMemory(profile) <= mem
-        && SchedulerUtils.isMatchSlaveAttributes(offer, requestAttributes)
-        && NMPorts.expectedNumPorts() <= ports) {
-      return true;
-    } else {
-      LOGGER.info("Offer not sufficient for task with, cpu: {}, memory: {}, ports: {}",
-          taskUtils.getAggregateCpus(profile), taskUtils.getAggregateMemory(profile), ports);
-      return false;
     }
   }
 

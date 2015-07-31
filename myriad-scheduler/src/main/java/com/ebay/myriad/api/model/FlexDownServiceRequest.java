@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 PayPal
+ * Copyright 2012-2014 eBay Software Foundation, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,21 +19,22 @@ import com.google.gson.Gson;
 import org.hibernate.validator.constraints.NotEmpty;
 
 /**
- * Flex up an auxtask/service
+ * Flex down an auxtask/service
  */
-public class FlexUpClusterRequest {
+public class FlexDownServiceRequest {
+
     @NotEmpty
     public Integer instances;
-
-    @NotEmpty
-    public String profile;
-
-    public FlexUpClusterRequest() {
-    }
     
-    public FlexUpClusterRequest(Integer instances, String profile) {
+    @NotEmpty
+    public String serviceName;
+
+    public FlexDownServiceRequest() {
+    }
+
+    public FlexDownServiceRequest(Integer instances, String serviceName) {
         this.instances = instances;
-        this.profile = profile;
+        this.serviceName = serviceName;
     }
 
     public Integer getInstances() {
@@ -44,12 +45,12 @@ public class FlexUpClusterRequest {
         this.instances = instances;
     }
 
-    public String getProfile() {
-        return profile;
+    public String getServiceName() {
+      return serviceName;
     }
 
-    public void setProfile(String profile) {
-        this.profile = profile;
+    public void setServiceName(String serviceName) {
+      this.serviceName = serviceName;
     }
 
     public String toString() {

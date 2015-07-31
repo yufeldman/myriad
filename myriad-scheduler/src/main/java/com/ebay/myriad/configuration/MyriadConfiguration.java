@@ -120,6 +120,9 @@ public class MyriadConfiguration {
 
   @JsonProperty
   private NodeManagerConfiguration nodemanager;
+  
+  @JsonProperty
+  private Map<String, AuxTaskConfiguration> auxTasks;
 
   @JsonProperty
   @NotEmpty
@@ -202,7 +205,18 @@ public class MyriadConfiguration {
   public NodeManagerConfiguration getNodeManagerConfiguration() {
     return this.nodemanager;
   }
+  
+  public Map<String, AuxTaskConfiguration> getAuxTaskConfigurations() {
+    return this.auxTasks;
+  }
 
+  public AuxTaskConfiguration getAuxTaskConfiguration(String taskName) {
+    if (auxTasks == null) {
+      return null;
+    }
+    return this.auxTasks.get(taskName);
+  }
+  
   public MyriadExecutorConfiguration getMyriadExecutorConfiguration() {
     return this.executor;
   }

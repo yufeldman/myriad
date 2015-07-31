@@ -15,12 +15,14 @@
  */
 package com.ebay.myriad.scheduler;
 
+import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.policy.NodeScaleDownPolicy;
 import com.ebay.myriad.state.NodeTask;
 import com.ebay.myriad.state.SchedulerState;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+
 import org.apache.mesos.Protos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,18 +57,99 @@ public class MyriadOperations {
     public void flexUpCluster(int instances, String profile) {
         Collection<NodeTask> nodes = new HashSet<>();
         for (int i = 0; i < instances; i++) {
-            nodes.add(new NodeTask(profileManager.get(profile)));
+          NodeTask nodeTask = new NodeTask(profileManager.get(profile));
+          nodeTask.setTaskPrefix("nm");
+          nodes.add(nodeTask);
         }
 
-        LOGGER.info("Adding {} instances to cluster", nodes.size());
+        LOGGER.info("Adding {} NM instances to cluster", nodes.size());
         this.schedulerState.addNodes(nodes);
     }
 
+    /**
+     * Flexup a service
+     * @param instances
+     * @param profileName
+     */
+    public void flexUpAService(int instances, String profileName) throws MyriadBadConfigurationException {
+      final NMProfile nmProfile;
+      if (profileName == null || (nmProfile = profileManager.get(profileName)) == null) {
+        throw new MyriadBadConfigurationException("Specified profile is invalid: " + profileName);
+      }
+      
+      Collection<NodeTask> nodes = new HashSet<>();
+      for (int i = 0; i < instances; i++) {
+        NodeTask nodeTask = new NodeTask(nmProfile);
+        nodeTask.setTaskPrefix(profileName);
+        nodes.add(nodeTask);
+      }
+
+      LOGGER.info("Adding {} {} instances to cluster", nodes.size(), profileName);
+      this.schedulerState.addNodes(nodes);
+    }
+    
+    /**
+     * Flexing down any service defined in the configuration
+     * @param numInstancesToScaleDown
+     * @param serviceName - name of the service
+     */
+    public void flexDownAService(int numInstancesToScaleDown, String serviceName) throws MyriadBadConfigurationException {
+      LOGGER.info("About to flex down {} instances of {}", numInstancesToScaleDown, serviceName);
+
+      int numScaledDown = 0;
+      Set<NodeTask> activeTasks = Sets.newHashSet(this.schedulerState.getActiveTasksByType(serviceName));
+
+      for (NodeTask nodeTask : activeTasks) {
+        this.schedulerState.makeTaskKillable(nodeTask.getTaskStatus().getTaskId());
+        numScaledDown++;
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("Marked NodeTask {} on host {} for kill.",
+              nodeTask.getTaskStatus().getTaskId(), nodeTask.getHostname());
+        }
+        if (numScaledDown >= numInstancesToScaleDown) {
+          break;
+        }
+      }
+      
+      int numActiveTasksScaledDown = numScaledDown;
+
+      // Flex down Staging tasks, if any
+      if (numScaledDown < numInstancesToScaleDown) {
+          Set<Protos.TaskID> stagingTasks = Sets.newHashSet(this.schedulerState.getStagingTaskIds());
+
+          for (Protos.TaskID taskId : stagingTasks) {
+              this.schedulerState.makeTaskKillable(taskId);
+              numScaledDown++;
+              if (numScaledDown == numInstancesToScaleDown) {
+                  break;
+              }
+          }
+      }
+      int numStagingTasksScaledDown = numScaledDown - numActiveTasksScaledDown;
+
+      // Flex down Pending tasks, if any
+      if (numScaledDown < numInstancesToScaleDown) {
+          Set<Protos.TaskID> pendingTasks = Sets.newHashSet(this.schedulerState.getPendingTaskIds());
+
+          for (Protos.TaskID taskId : pendingTasks) {
+              this.schedulerState.makeTaskKillable(taskId);
+              numScaledDown++;
+              if (numScaledDown == numInstancesToScaleDown) {
+                  break;
+              }
+          }
+      }
+      int numPendingTasksScaledDown = numScaledDown - numStagingTasksScaledDown;
+
+      LOGGER.info("Flexed down {} of {} instances including {} staging instances, and {} pending instances of {}",
+              numScaledDown, numInstancesToScaleDown, numStagingTasksScaledDown, numPendingTasksScaledDown, serviceName);
+    }
+    
     public void flexDownCluster(int numInstancesToScaleDown) {
         LOGGER.info("About to flex down {} instances", numInstancesToScaleDown);
 
         int numScaledDown = 0;
-        Set<NodeTask> activeTasks = Sets.newHashSet(this.schedulerState.getActiveTasks());
+        Set<NodeTask> activeTasks = Sets.newHashSet(this.schedulerState.getActiveTasksByType("nm"));
         List<String> nodesToScaleDown = nodeScaleDownPolicy.getNodesToScaleDown();
         if (activeTasks.size() > nodesToScaleDown.size()) {
             LOGGER.info("Will skip flexing down {} Node Manager instances that were launched but " +

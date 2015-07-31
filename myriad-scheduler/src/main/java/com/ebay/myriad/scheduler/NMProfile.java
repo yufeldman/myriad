@@ -26,14 +26,14 @@ public class NMProfile {
     /**
      * Number of CPU advertised to YARN Resource Manager.
      */
-    private Long cpus;
+    private Double cpus;
 
     /**
      * Memory in MB advertised to YARN Resource Manager.
      */
-    private Long memory;
+    private Double memory;
 
-    public NMProfile(String name, Long cpus, Long memory) {
+    public NMProfile(String name, Double cpus, Double memory) {
         this.name = name;
         this.cpus = cpus;
         this.memory = memory;
@@ -43,11 +43,11 @@ public class NMProfile {
         return name;
     }
 
-    public Long getCpus() {
+    public Double getCpus() {
         return cpus;
     }
 
-    public Long getMemory() {
+    public Double getMemory() {
         return memory;
     }
 

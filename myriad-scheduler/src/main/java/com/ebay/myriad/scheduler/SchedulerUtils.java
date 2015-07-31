@@ -55,8 +55,8 @@ public class SchedulerUtils {
         return match;
     }
 
-    public static boolean isUniqueHostname(Protos.OfferOrBuilder offer,
-                                           Collection<NodeTask> tasks) {
+    public static boolean isUniqueHostname(Protos.OfferOrBuilder offer, NodeTask taskToLaunch, 
+        Collection<NodeTask> tasks) {
         Preconditions.checkArgument(offer != null);
         String offerHostname = offer.getHostname();
 
@@ -65,8 +65,10 @@ public class SchedulerUtils {
         }
         boolean uniqueHostname = true;
         for (NodeTask task : tasks) {
-            if (offerHostname.equalsIgnoreCase(task.getHostname())) {
+            if (offerHostname.equalsIgnoreCase(task.getHostname()) &&
+                task.getTaskPrefix().equalsIgnoreCase(taskToLaunch.getTaskPrefix())) {
                 uniqueHostname = false;
+                break;
             }
         }
         LOGGER.debug("Offer's hostname {} is unique: {}", offerHostname, uniqueHostname);

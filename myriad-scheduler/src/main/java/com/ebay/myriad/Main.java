@@ -18,6 +18,8 @@ package com.ebay.myriad;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
+import com.ebay.myriad.configuration.AuxTaskConfiguration;
+import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.health.MesosDriverHealthCheck;
 import com.ebay.myriad.health.MesosMasterHealthCheck;
@@ -35,6 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+
 import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -96,13 +99,16 @@ public class Main {
         initHealthChecks(injector);
         initProfiles(injector);
         validateNMInstances(injector);
+        initJavaBasedTaskConfiguration(injector);
         initDisruptors(injector);
 
         initRebalancerService(cfg, injector);
         initTerminatorService(injector);
         startMesosDriver(injector);
         startNMInstances(injector);
+        startJavaBasedTaskInstance(injector);
     }
+
 
     private void startMesosDriver(Injector injector) {
         LOGGER.info("starting mesosDriver..");
@@ -146,8 +152,8 @@ public class Main {
                 if (MapUtils.isNotEmpty(profiles)
                         && profileResourceMap.containsKey("cpu")
                         && profileResourceMap.containsKey("mem")) {
-                    Long cpu = Long.parseLong(profileResourceMap.get("cpu"));
-                    Long mem = Long.parseLong(profileResourceMap.get("mem"));
+                    Double cpu = Double.parseDouble(profileResourceMap.get("cpu"));
+                    Double mem = Double.parseDouble(profileResourceMap.get("mem"));
 
                     profileManager.add(new NMProfile(profile.getKey(), cpu, mem));
                 } else {
@@ -171,8 +177,8 @@ public class Main {
           }
           if (entry.getValue() > 0) {
             if (nmProfile.getCpus() > maxCpu) { // find the profile with largest number of cpus
-              maxCpu = nmProfile.getCpus();
-              maxMem = nmProfile.getMemory(); // use the memory from the same profile
+              maxCpu = nmProfile.getCpus().longValue();
+              maxMem = nmProfile.getMemory().longValue(); // use the memory from the same profile
             }
           }
         }
@@ -187,6 +193,29 @@ public class Main {
       MyriadOperations myriadOperations = injector.getInstance(MyriadOperations.class);
       for (Map.Entry<String, Integer> entry : nmInstances.entrySet()) {
         myriadOperations.flexUpCluster(entry.getValue(), entry.getKey());
+      }
+    }
+
+    /**
+     * Create NMProfile for any configured service
+     * @param injector
+     */
+    private void initJavaBasedTaskConfiguration(Injector injector) {
+      LOGGER.info("Initializing JavaBasedTaskConfiguration");
+      NMProfileManager profileManager = injector.getInstance(NMProfileManager.class);
+
+      Map<String, AuxTaskConfiguration> auxServicesConfigs = 
+          injector.getInstance(MyriadConfiguration.class).getAuxTaskConfigurations();
+      if (auxServicesConfigs != null) {
+        for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
+          AuxTaskConfiguration config = entry.getValue();
+          Double cpu = (config.getCpus().isPresent() ? config.getCpus().get() : null);
+          Double mem = (config.getJvmMaxMemoryMB().isPresent() ? config.getJvmMaxMemoryMB().get() : null);
+          
+          if (cpu != null && mem != null) {
+            profileManager.add(new NMProfile(entry.getKey(), cpu, mem));
+          }
+        }
       }
     }
 
@@ -220,4 +249,23 @@ public class Main {
         disruptorManager.init(injector);
     }
 
+    /**
+     * Start tasks for configured services 
+     * @param injector
+     */
+    private void startJavaBasedTaskInstance(Injector injector) {
+      Map<String, AuxTaskConfiguration> auxServicesConfigs = 
+          injector.getInstance(MyriadConfiguration.class).getAuxTaskConfigurations();
+      if (auxServicesConfigs != null) {
+        MyriadOperations myriadOperations = injector.getInstance(MyriadOperations.class);
+        for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
+          // TODO (yufeldman) Deal with # of instances
+          try {
+            myriadOperations.flexUpAService(1, entry.getKey());
+          } catch (MyriadBadConfigurationException e) {
+            LOGGER.error("Exception while trying to flexup service: {}", entry.getKey(), e);
+          }
+        } 
+      }
+    }
 }

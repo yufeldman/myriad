@@ -1,9 +1,17 @@
 package com.ebay.myriad.scheduler;
 
+import java.nio.charset.Charset;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Objects;
+
+import javax.inject.Inject;
+
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
 import com.ebay.myriad.state.NodeTask;
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.mesos.Protos.CommandInfo;
 import org.apache.mesos.Protos.CommandInfo.URI;
@@ -28,7 +36,13 @@ import java.util.Objects;
  * Creates Tasks based on mesos offers
  */
 public interface TaskFactory {
-  TaskInfo createTask(Offer offer, FrameworkID frameworkId,
+  static final String YARN_RESOURCEMANAGER_HOSTNAME = "yarn.resourcemanager.hostname";
+  static final String YARN_RESOURCEMANAGER_WEBAPP_ADDRESS = "yarn.resourcemanager.webapp.address";
+  static final String YARN_RESOURCEMANAGER_WEBAPP_HTTPS_ADDRESS = "yarn.resourcemanager.webapp.https.address";
+  static final String YARN_HTTP_POLICY = "yarn.http.policy";
+  static final String YARN_HTTP_POLICY_HTTPS_ONLY = "HTTPS_ONLY";
+
+  TaskInfo createTask(Offer offer, FrameworkID frameworkId, 
     TaskID taskId, NodeTask nodeTask);
 
   // TODO(Santosh): This is needed because the ExecutorInfo constructed
@@ -38,6 +52,12 @@ public interface TaskFactory {
   // ExecutorInfo, we wouldn't need this interface method.
   ExecutorInfo getExecutorInfoForSlave(FrameworkID frameworkId,
     Offer offer, CommandInfo commandInfo);
+  
+  /**
+   * get Task specific constraints 
+   * @return ServiceConstraints
+   */
+  TaskConstraints getConstraints();
 
   /**
    * Creates TaskInfo objects to launch NMs as mesos tasks.
@@ -46,16 +66,12 @@ public interface TaskFactory {
     public static final String EXECUTOR_NAME = "myriad_task";
     public static final String EXECUTOR_PREFIX = "myriad_executor";
     public static final String YARN_NODEMANAGER_OPTS_KEY = "YARN_NODEMANAGER_OPTS";
-    private static final String YARN_RESOURCEMANAGER_HOSTNAME = "yarn.resourcemanager.hostname";
-    private static final String YARN_RESOURCEMANAGER_WEBAPP_ADDRESS = "yarn.resourcemanager.webapp.address";
-    private static final String YARN_RESOURCEMANAGER_WEBAPP_HTTPS_ADDRESS = "yarn.resourcemanager.webapp.https.address";
-    private static final String YARN_HTTP_POLICY = "yarn.http.policy";
-    private static final String YARN_HTTP_POLICY_HTTPS_ONLY = "HTTPS_ONLY";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NMTaskFactoryImpl.class);
     private MyriadConfiguration cfg;
     private TaskUtils taskUtils;
     private ExecutorCommandLineGenerator clGenerator;
+    private TaskConstraints constraints;
 
     @Inject
     public NMTaskFactoryImpl(MyriadConfiguration cfg, TaskUtils taskUtils,
@@ -63,6 +79,7 @@ public interface TaskFactory {
       this.cfg = cfg;
       this.taskUtils = taskUtils;
       this.clGenerator = clGenerator;
+      this.constraints = new NMTaskConstraints();
     }
 
     //Utility function to get the first NMPorts.expectedNumPorts number of ports of an offer
@@ -234,6 +251,23 @@ public interface TaskFactory {
                   .setType(Value.Type.SCALAR)
                   .setScalar(executorMemory).build())
           .setExecutorId(executorId).build();
+    }
+
+    @Override
+    public TaskConstraints getConstraints() {
+      return constraints;
+    }
+  }
+  
+  /**
+   * Implement NM Task Constraints
+   *
+   */
+  static class NMTaskConstraints implements TaskConstraints {
+
+    @Override
+    public int portsCount() {
+      return NMPorts.expectedNumPorts();
     }
   }
 }
