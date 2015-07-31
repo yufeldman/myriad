@@ -15,9 +15,11 @@
  */
 package com.ebay.myriad.scheduler;
 
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.state.NodeTask;
 import com.ebay.myriad.state.SchedulerState;
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.mesos.Protos;
 import org.slf4j.Logger;
@@ -31,8 +33,8 @@ import java.util.Collection;
 public class SchedulerUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerUtils.class);
 
-    public static boolean isUniqueHostname(Protos.OfferOrBuilder offer,
-                                           Collection<NodeTask> tasks) {
+    public static boolean isUniqueHostname(Protos.OfferOrBuilder offer, NodeTask taskToLaunch, 
+        Collection<NodeTask> tasks) {
         Preconditions.checkArgument(offer != null);
         String offerHostname = offer.getHostname();
 
@@ -41,8 +43,10 @@ public class SchedulerUtils {
         }
         boolean uniqueHostname = true;
         for (NodeTask task : tasks) {
-            if (offerHostname.equalsIgnoreCase(task.getHostname())) {
+            if (offerHostname.equalsIgnoreCase(task.getHostname()) &&
+                task.getTaskPrefix().equalsIgnoreCase(taskToLaunch.getTaskPrefix())) {
                 uniqueHostname = false;
+                break;
             }
         }
         LOGGER.debug("Offer's hostname {} is unique: {}", offerHostname, uniqueHostname);
@@ -58,7 +62,7 @@ public class SchedulerUtils {
      * @return
      */
     public static boolean isEligibleForFineGrainedScaling(String hostName, SchedulerState state) {
-      for (NodeTask activeNMTask : state.getActiveTasks()) {
+      for (NodeTask activeNMTask : state.getActiveTasksByType(NodeManagerConfiguration.NM_TASK_PREFIX)) {
         if (activeNMTask.getProfile().getCpus() == 0 &&
             activeNMTask.getProfile().getMemory() == 0 &&
             activeNMTask.getHostname().equals(hostName)) {

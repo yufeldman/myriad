@@ -27,11 +27,14 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.mesos.Protos;
-import com.ebay.myriad.scheduler.NMProfile;
+
+import com.ebay.myriad.scheduler.ServiceResourceProfile;
 import com.ebay.myriad.state.NodeTask;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.protobuf.GeneratedMessage;
 
 /**
@@ -43,7 +46,10 @@ public class ByteBufferSupport {
   public static final String UTF8 = "UTF-8";
   public static final byte[] ZERO_BYTES = new byte[0];
   private static Gson gson = new Gson();
-
+  private static Gson gsonCustom = new GsonBuilder().
+      registerTypeAdapter(ServiceResourceProfile.class, new ServiceResourceProfile.CustomDeserializer()).
+      create();
+  
   public static void addByteBuffers(List<ByteBuffer> list,
     ByteArrayOutputStream bytes) throws IOException {
     // If list, add the list size, then the size of each buffer followed by the buffer.
@@ -98,9 +104,10 @@ public class ByteBufferSupport {
     return bb.array();
   }
 
+
   public static ByteBuffer toByteBuffer(NodeTask nt) {
     // Determine the size of ByteBuffer to allocate
-    // The NMProfile toString() returns Json, if this ever changes then this
+    // The ServiceResourceProfile toString() returns Json, if this ever changes then this
     // will fail. Json is expected.
     byte[] profile = toBytes(nt.getProfile().toString());
     int size = profile.length + INT_SIZE;
@@ -138,6 +145,12 @@ public class ByteBufferSupport {
         size += INT_SIZE;
     }
 
+    byte[] taskPrefixBytes = ZERO_BYTES;
+    if (nt.getTaskPrefix() != null) {
+      taskPrefixBytes = toBytes(nt.getTaskPrefix());
+      size += taskPrefixBytes.length + INT_SIZE;
+    }
+    
     // Allocate and populate the buffer.
     ByteBuffer bb = createBuffer(size);
     putBytes(bb, profile);
@@ -147,6 +160,7 @@ public class ByteBufferSupport {
     putBytes(bb, getSlaveBytes(nt));
     putBytes(bb, getTaskBytes(nt));
     putBytes(bb, getExecutorInfoBytes(nt));
+    putBytes(bb, taskPrefixBytes);
     // Make sure the buffer is at the beginning
     bb.rewind();
     return bb;
@@ -190,7 +204,7 @@ public class ByteBufferSupport {
   public static NodeTask toNodeTask(ByteBuffer bb) {
     NodeTask nt = null;
     if (bb != null && bb.array().length > 0) {
-      nt = new NodeTask(getProfile(bb), getConstraint(bb));
+      nt = new NodeTask(getServiceResourceProfile(bb), getConstraint(bb));
       nt.setHostname(toString(bb));
       nt.setSlaveId(toSlaveId(bb));
       nt.setTaskStatus(toTaskStatus(bb));
@@ -268,10 +282,10 @@ public class ByteBufferSupport {
     }
   }
 
-  public static NMProfile getProfile(ByteBuffer bb) {
+  public static ServiceResourceProfile getServiceResourceProfile(ByteBuffer bb) {
     String p = toString(bb);
     if (!StringUtils.isEmpty(p)) {
-      return gson.fromJson(p, NMProfile.class);
+      return gsonCustom.fromJson(p, ServiceResourceProfile.class);
     } else {
       return null;
     }
