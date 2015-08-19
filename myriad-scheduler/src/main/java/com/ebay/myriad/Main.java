@@ -209,12 +209,10 @@ public class Main {
       if (auxServicesConfigs != null) {
         for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
           AuxTaskConfiguration config = entry.getValue();
-          Double cpu = (config.getCpus().isPresent() ? config.getCpus().get() : null);
-          Double mem = (config.getJvmMaxMemoryMB().isPresent() ? config.getJvmMaxMemoryMB().get() : null);
+          final Double cpu = config.getCpus().or(AuxTaskConfiguration.DEFAULT_CPU);
+          final Double mem = config.getJvmMaxMemoryMB().or(AuxTaskConfiguration.DEFAULT_MEMORY);
           
-          if (cpu != null && mem != null) {
-            profileManager.add(new NMProfile(entry.getKey(), cpu, mem));
-          }
+          profileManager.add(new NMProfile(entry.getKey(), cpu, mem));
         }
       }
     }

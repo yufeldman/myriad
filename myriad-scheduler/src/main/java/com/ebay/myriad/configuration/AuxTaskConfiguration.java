@@ -16,6 +16,10 @@ public class AuxTaskConfiguration {
   
   private static final Logger LOGGER = LoggerFactory.getLogger(AuxTaskConfiguration.class);
 
+  public static final Double DEFAULT_CPU = 0.1;
+  
+  public static final Double DEFAULT_MEMORY = 16.0;
+  
   /**
    * Translates to -Xmx for the JVM.
    */
