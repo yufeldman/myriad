@@ -106,7 +106,7 @@ public class Main {
         initTerminatorService(injector);
         startMesosDriver(injector);
         startNMInstances(injector);
-        startJavaBasedTaskInstance(injector);
+        //startJavaBasedTaskInstance(injector);
     }
 
 
