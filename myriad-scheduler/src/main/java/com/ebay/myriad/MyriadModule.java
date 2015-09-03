@@ -18,6 +18,7 @@ package com.ebay.myriad;
 import com.ebay.myriad.configuration.AuxTaskConfiguration;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.policy.LeastAMNodesFirstPolicy;
 import com.ebay.myriad.policy.NodeScaleDownPolicy;
 import com.ebay.myriad.scheduler.MyriadDriverManager;
@@ -100,7 +101,7 @@ public class MyriadModule extends AbstractModule {
 
         MapBinder<String, TaskFactory> mapBinder
         = MapBinder.newMapBinder(binder(), String.class, TaskFactory.class);
-        mapBinder.addBinding("nm").to(NMTaskFactoryImpl.class).in(Scopes.SINGLETON);
+        mapBinder.addBinding(NodeManagerConfiguration.NM_TASK_PREFIX).to(NMTaskFactoryImpl.class).in(Scopes.SINGLETON);
         Map<String, AuxTaskConfiguration> auxServicesConfigs = cfg.getAuxTaskConfigurations();
         if (auxServicesConfigs != null) {
           for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {

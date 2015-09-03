@@ -26,12 +26,19 @@ import org.slf4j.LoggerFactory;
 
 import com.ebay.myriad.configuration.AuxTaskConfiguration;
 import com.ebay.myriad.configuration.MyriadConfiguration;
+import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.scheduler.TaskFactory.NMTaskFactoryImpl;
+import com.ebay.myriad.scheduler.DownloadNMExecutorCLGenImpl;
+import com.ebay.myriad.scheduler.ExecutorCommandLineGenerator;
+import com.ebay.myriad.scheduler.NMExecutorCLGenImpl;
 import com.ebay.myriad.scheduler.TaskFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import com.google.inject.multibindings.MapBinder;
 
 /**
@@ -42,12 +49,13 @@ public class MyriadTestModule extends AbstractModule {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MyriadTestModule.class);
   
+  private MyriadConfiguration cfg;
+  
   @SuppressWarnings("unchecked")
   @Override
   protected void configure() {
     
     ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-    MyriadConfiguration cfg;
     try {
       cfg = mapper.readValue(
               Thread.currentThread().getContextClassLoader().getResource("myriad-config-test-default.yml"),
@@ -61,9 +69,11 @@ public class MyriadTestModule extends AbstractModule {
       return;
     }
     
+    bind(MyriadConfiguration.class).toInstance(cfg);
+
     MapBinder<String, TaskFactory> mapBinder
     = MapBinder.newMapBinder(binder(), String.class, TaskFactory.class);
-    mapBinder.addBinding("nm").to(NMTaskFactoryImpl.class).in(Scopes.SINGLETON);
+    mapBinder.addBinding(NodeManagerConfiguration.NM_TASK_PREFIX).to(NMTaskFactoryImpl.class).in(Scopes.SINGLETON);
     Map<String, AuxTaskConfiguration> auxServicesConfigs = cfg.getAuxTaskConfigurations();
     for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
       String taskFactoryClass = entry.getValue().getTaskFactoryImplName();
@@ -75,5 +85,20 @@ public class MyriadTestModule extends AbstractModule {
       }
     }
   }
+
+  @Provides
+  @Singleton
+  ExecutorCommandLineGenerator providesCLIGenerator(MyriadConfiguration cfg) {
+      ExecutorCommandLineGenerator cliGenerator = null;
+      MyriadExecutorConfiguration myriadExecutorConfiguration =
+          cfg.getMyriadExecutorConfiguration();
+      if (myriadExecutorConfiguration.getNodeManagerUri().isPresent()) {
+          cliGenerator = new DownloadNMExecutorCLGenImpl(cfg,
+             myriadExecutorConfiguration.getNodeManagerUri().get());
+      } else {
+          cliGenerator = new NMExecutorCLGenImpl(cfg);
+      }
+      return cliGenerator;
+  }    
 
 }

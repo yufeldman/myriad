@@ -68,6 +68,10 @@ public class AuxTaskConfiguration {
   @JsonProperty
   protected String taskName;
   
+  @JsonProperty
+  protected Integer maxInstances;
+  
+  
   public Optional<Double> getJvmMaxMemoryMB() {
       return Optional.fromNullable(jvmMaxMemoryMB);
   }
@@ -99,4 +103,9 @@ public class AuxTaskConfiguration {
   public List<Long> getPorts() {
     return ports;
   }
+  
+  public Optional<Integer> getMaxInstances() {
+    return Optional.fromNullable(maxInstances);
+  }
+
 }

@@ -22,6 +22,7 @@ import com.ebay.myriad.api.model.FlexUpClusterRequest;
 import com.ebay.myriad.api.model.FlexUpServiceRequest;
 import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.scheduler.MyriadOperations;
 import com.ebay.myriad.scheduler.NMProfileManager;
 import com.ebay.myriad.state.SchedulerState;
@@ -101,27 +102,43 @@ public class ClustersResource {
     @Timed
     @PUT
     @Path("/flexupservice")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response flexUpservice(FlexUpServiceRequest request) {
-        Preconditions.checkNotNull(request,
-                "request object cannot be null or empty");
+      Preconditions.checkNotNull(request,
+              "request object cannot be null or empty");
 
-        LOGGER.info("Received Flexup a Service Request");
+      LOGGER.info("Received Flexup a Service Request");
 
+      Integer instances = request.getInstances();
+      String profile = request.getServiceName();
 
-        Integer instances = request.getInstances();
-        String profile = request.getProfile();
+      LOGGER.info("Instances: {}", instances);
+      LOGGER.info("Profile: {}", profile);
+      
+      // Validate profile request
+      Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
+      
+      if (!this.profileManager.exists(profile)) {
+        response.status(Response.Status.BAD_REQUEST)
+                .entity("Sevrice does not exist: " + profile);
+        LOGGER.error("Provided service does not exist " + profile);
+        return response.build();
+      }
+      
+      if (!this.isValidInstanceSize(instances)) {
+        response.status(Response.Status.BAD_REQUEST)
+                .entity("Invalid instance size: " + instances);
+        LOGGER.error("Invalid instance size request " + instances);
+        return response.build();
+      }
 
-        LOGGER.info("Instances: {}", instances);
-        LOGGER.info("Profile: {}", profile);
-
-        try {
-          this.myriadOperations.flexUpAService(instances, profile);
-        } catch (MyriadBadConfigurationException e) {
-          return Response.serverError().entity(e).build();
-        }
-        return Response.ok().build();
+      try {
+        this.myriadOperations.flexUpAService(instances, profile);
+      } catch (MyriadBadConfigurationException e) {
+        return response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+      }
+      return response.build();
     }
 
     @Timed
@@ -148,7 +165,7 @@ public class ClustersResource {
 
         // warn that number of requested instances isn't available
         // but instances will still be flexed down
-        Integer flexibleInstances = this.getFlexibleInstances();
+        Integer flexibleInstances = this.myriadOperations.getFlexibleInstances(NodeManagerConfiguration.NM_TASK_PREFIX);
         if (flexibleInstances < instances)  {
             response.entity("Number of requested instances is greater than available.");
             // just doing a simple check here. pass the requested number of instances
@@ -167,28 +184,45 @@ public class ClustersResource {
         return (instances > 0);
     }
 
-    // TODO (mohit): put this in Myriad Operations?
-    private Integer getFlexibleInstances() {
-        // this follows the logic of myriadOperations.flexDownCluster
-        return this.schedulerState.getActiveTaskIds().size()
-                + this.schedulerState.getStagingTaskIds().size()
-                + this.schedulerState.getPendingTaskIds().size();
-    }
-
     @Timed
     @PUT
     @Path("/flexdownservice")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response flexDownservice(FlexDownServiceRequest request) {
-        Preconditions.checkNotNull(request,
-                "request object cannot be null or empty");
-        try {
-          this.myriadOperations.flexDownAService(request.getInstances(), request.getServiceName());
-        } catch (MyriadBadConfigurationException e) {
-          return Response.serverError().entity(e).build();
-        }
-        return Response.ok().build();
-    }
+      Preconditions.checkNotNull(request,
+              "request object cannot be null or empty");
+      
+      Integer instances = request.getInstances();
+      String serviceName = request.getServiceName();
+      
+      LOGGER.info("Received flexdown request for service {}", serviceName);
+      LOGGER.info("Instances: " + instances);
 
+      Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
+
+      if (!this.isValidInstanceSize(instances)) {
+          response.status(Response.Status.BAD_REQUEST)
+                  .entity("Invalid instance size: " + instances);
+          LOGGER.error("Invalid instance size request " + instances);
+          return response.build();
+      }
+
+      // warn that number of requested instances isn't available
+      // but instances will still be flexed down
+      Integer flexibleInstances = this.myriadOperations.getFlexibleInstances(serviceName);
+      if (flexibleInstances < instances)  {
+          response.entity("Number of requested instances is greater than available.");
+          // just doing a simple check here. pass the requested number of instances
+          // to myriadOperations and let it sort out how many actually get flexxed down.
+          LOGGER.warn("Requested number of instances greater than available: {} < {}", flexibleInstances, instances);
+      }
+
+      try {
+        this.myriadOperations.flexDownAService(instances, serviceName);
+      } catch (MyriadBadConfigurationException e) {
+        return response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+      }
+      return response.build();
+    }
 }

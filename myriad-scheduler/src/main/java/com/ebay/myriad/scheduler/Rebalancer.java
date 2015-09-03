@@ -15,9 +15,14 @@
  */
 package com.ebay.myriad.scheduler;
 
+import java.util.Set;
+
 import com.ebay.myriad.configuration.MyriadConfiguration;
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.state.SchedulerState;
 import com.google.common.base.Preconditions;
+
+import org.apache.mesos.Protos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,8 +56,10 @@ public class Rebalancer implements Runnable {
 
     @Override
     public void run() {
-        LOGGER.info("Active {}, Pending {}", schedulerState.getActiveTaskIds().size(), schedulerState.getPendingTaskIds().size());
-        if (schedulerState.getActiveTaskIds().size() < 1 && schedulerState.getPendingTaskIds().size() < 1) {
+      final Set<Protos.TaskID> activeIds = schedulerState.getActiveTaskIds(NodeManagerConfiguration.NM_TASK_PREFIX);
+      final Set<Protos.TaskID> pendingIds = schedulerState.getPendingTaskIds(NodeManagerConfiguration.NM_TASK_PREFIX);
+        LOGGER.info("Active {}, Pending {}", activeIds.size(), pendingIds.size());
+        if (activeIds.size() < 1 && pendingIds.size() < 1) {
             myriadOperations.flexUpCluster(1, "small");
         }
 //            RestAdapter restAdapter = new RestAdapter.Builder()

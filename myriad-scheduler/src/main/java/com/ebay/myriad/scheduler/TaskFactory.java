@@ -1,6 +1,5 @@
 package com.ebay.myriad.scheduler;
 
-import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
@@ -27,10 +26,6 @@ import org.apache.mesos.Protos.Value.Scalar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Objects;
 
 /**
  * Creates Tasks based on mesos offers

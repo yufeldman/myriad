@@ -40,7 +40,7 @@ public class MyriadBadConfigurationExceptionTest {
 
   @Test
   public void myriadExceptionTest() {
-    final String testStr = "{\"detailMessage\":\"Bad configuration exception\",\"stackTrace\":[],\"suppressedExceptions\":[]}";
+    final String testStr = "com.ebay.myriad.configuration.MyriadBadConfigurationException: Bad configuration exception";
     MyriadBadConfigurationException exp = new MyriadBadConfigurationException("Bad configuration exception");
     
     assertEquals(testStr, exp.toString());

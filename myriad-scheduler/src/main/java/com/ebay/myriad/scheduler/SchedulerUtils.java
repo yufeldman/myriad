@@ -15,9 +15,11 @@
  */
 package com.ebay.myriad.scheduler;
 
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.state.NodeTask;
 import com.ebay.myriad.state.SchedulerState;
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.mesos.Protos;
@@ -84,7 +86,7 @@ public class SchedulerUtils {
      * @return
      */
     public static boolean isEligibleForFineGrainedScaling(String hostName, SchedulerState state) {
-      for (NodeTask activeNMTask : state.getActiveTasks()) {
+      for (NodeTask activeNMTask : state.getActiveTasksByType(NodeManagerConfiguration.NM_TASK_PREFIX)) {
         if (activeNMTask.getProfile().getCpus() == 0 &&
             activeNMTask.getProfile().getMemory() == 0 &&
             activeNMTask.getHostname().equals(hostName)) {

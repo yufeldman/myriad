@@ -29,9 +29,9 @@ import javax.inject.Inject;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.mesos.Protos.CommandInfo;
 import org.apache.mesos.Protos.ExecutorInfo;
+import org.apache.mesos.Protos.FrameworkID;
 import org.apache.mesos.Protos.Offer;
 import org.apache.mesos.Protos.Resource;
-import org.apache.mesos.Protos.SlaveID;
 import org.apache.mesos.Protos.TaskID;
 import org.apache.mesos.Protos.TaskInfo;
 import org.apache.mesos.Protos.Value;
@@ -76,7 +76,7 @@ import com.google.common.base.Strings;
           this.constraints = new JHSTaskConstraints(cfg);
       }
       @Override
-      public TaskInfo createTask(Offer offer, TaskID taskId, NodeTask nodeTask) {
+      public TaskInfo createTask(Offer offer, FrameworkID frameworkId, TaskID taskId, NodeTask nodeTask) {
         Objects.requireNonNull(offer, "Offer should be non-null");
         Objects.requireNonNull(nodeTask, "NodeTask should be non-null");
 
@@ -322,7 +322,8 @@ import com.google.common.base.Strings;
         return returnedPorts;
       }
       @Override
-      public ExecutorInfo getExecutorInfoForSlave(SlaveID slave) {
+      public ExecutorInfo getExecutorInfoForSlave(FrameworkID frameworkId, Offer offer,
+          CommandInfo commandInfo) {
         // nothing to implement here, since we are using default slave executor
         return null;
       }

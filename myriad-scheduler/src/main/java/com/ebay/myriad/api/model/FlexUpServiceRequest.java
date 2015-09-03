@@ -28,14 +28,14 @@ public class FlexUpServiceRequest {
     public Integer instances;
 
     @NotEmpty
-    public String profile;
+    public String serviceName;
 
     public FlexUpServiceRequest() {
     }
     
     public FlexUpServiceRequest(Integer instances, String profile) {
         this.instances = instances;
-        this.profile = profile;
+        this.serviceName = profile;
     }
 
     public Integer getInstances() {
@@ -46,12 +46,12 @@ public class FlexUpServiceRequest {
         this.instances = instances;
     }
 
-    public String getProfile() {
-        return profile;
+    public String getServiceName() {
+        return serviceName;
     }
 
-    public void setProfile(String profile) {
-        this.profile = profile;
+    public void setServiceName(String profile) {
+        this.serviceName = profile;
     }
 
     public String toString() {

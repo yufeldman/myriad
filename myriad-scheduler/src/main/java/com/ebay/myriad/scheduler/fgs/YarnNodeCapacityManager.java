@@ -1,5 +1,6 @@
 package com.ebay.myriad.scheduler.fgs;
 
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.executor.ContainerTaskStatusRequest;
 import com.ebay.myriad.scheduler.MyriadDriver;
 import com.ebay.myriad.scheduler.NMTaskFactoryAnnotation;
@@ -218,7 +219,7 @@ public class YarnNodeCapacityManager extends BaseInterceptor {
         Protos.ExecutorInfo executorInfo = node.getExecInfo();
         if (executorInfo == null) {
             executorInfo = Protos.ExecutorInfo.newBuilder(
-                 state.getNodeTask(offer.getSlaveId()).getExecutorInfo())
+                 state.getNodeTask(offer.getSlaveId(), NodeManagerConfiguration.NM_TASK_PREFIX).getExecutorInfo())
                 .setFrameworkId(offer.getFrameworkId()).build();
             node.setExecInfo(executorInfo);
         }

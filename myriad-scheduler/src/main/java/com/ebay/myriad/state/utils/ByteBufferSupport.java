@@ -123,6 +123,12 @@ public class ByteBufferSupport {
         size += INT_SIZE;
     }
 
+    byte[] taskPrefixBytes = ZERO_BYTES;
+    if (nt.getTaskPrefix() != null) {
+      taskPrefixBytes = toBytes(nt.getTaskPrefix());
+      size += taskPrefixBytes.length + INT_SIZE;
+    }
+    
     // Allocate and populate the buffer.
     ByteBuffer bb = createBuffer(size);
     putBytes(bb, profile);
@@ -130,6 +136,7 @@ public class ByteBufferSupport {
     putBytes(bb, getSlaveBytes(nt));
     putBytes(bb, getTaskBytes(nt));
     putBytes(bb, getExecutorInfoBytes(nt));
+    putBytes(bb, taskPrefixBytes);
     // Make sure the buffer is at the beginning
     bb.rewind();
     return bb;

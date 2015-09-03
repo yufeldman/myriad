@@ -106,7 +106,7 @@ public class Main {
         initTerminatorService(injector);
         startMesosDriver(injector);
         startNMInstances(injector);
-        //startJavaBasedTaskInstance(injector);
+        startJavaBasedTaskInstance(injector);
     }
 
 
@@ -257,11 +257,10 @@ public class Main {
       if (auxServicesConfigs != null) {
         MyriadOperations myriadOperations = injector.getInstance(MyriadOperations.class);
         for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
-          // TODO (yufeldman) Deal with # of instances
           try {
-            myriadOperations.flexUpAService(1, entry.getKey());
+            myriadOperations.flexUpAService(entry.getValue().getMaxInstances().or(1), entry.getKey());
           } catch (MyriadBadConfigurationException e) {
-            LOGGER.error("Exception while trying to flexup service: {}", entry.getKey(), e);
+            LOGGER.warn("Exception while trying to flexup service: {}", entry.getKey(), e);
           }
         } 
       }
