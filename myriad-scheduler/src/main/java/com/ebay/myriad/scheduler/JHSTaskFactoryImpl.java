@@ -56,9 +56,9 @@ import com.google.common.base.Strings;
       private static final Logger LOGGER = LoggerFactory.getLogger(JHSTaskFactoryImpl.class);
       
       private static final String[] JHS_ADDRESSES = new String[] {
-        "mapreduce.jobhistory.admin.address",
-        "mapreduce.jobhistory.address",
-        "mapreduce.jobhistory.webapp.address"
+        "myriad.mapreduce.jobhistory.admin.address",
+        "myriad.mapreduce.jobhistory.address",
+        "myriad.mapreduce.jobhistory.webapp.address"
       };
       
       
@@ -87,8 +87,7 @@ import com.google.common.base.Strings;
           return null;
         }
         
-        //TODO (yfeldman) domain for DNS
-        final String jhsHostName = nodeTask.getTaskPrefix() + "." + cfg.getFrameworkName() + ".mesos";
+        final String jhsHostName = "0.0.0.0";
         final String jsEnv = serviceConfig.getEnvSettings();
         final String rmHostName = System.getProperty(YARN_RESOURCEMANAGER_HOSTNAME);
         
@@ -97,17 +96,21 @@ import com.google.common.base.Strings;
         if (rmHostName != null && !rmHostName.isEmpty()) {
           strB.append("-D" + YARN_RESOURCEMANAGER_HOSTNAME + "=" + rmHostName + " ");
         }
-        final List<Long> ports = serviceConfig.getPorts();
-        
-        final List<Long> returnedPorts = getAvailablePorts(offer, ports);
-        
-        if (ports != null && ports.size() >= JHS_PORTS_COUNT) {
-          int i = 0;
-          for (Long port : returnedPorts) {
-            strB.append("-D" + JHS_ADDRESSES[i++] + "=" + jhsHostName + ":" + port + " ");
-          }
+        List<Long> ports = serviceConfig.getPorts();
+        final boolean useOffersPorts;
+        if (ports == null || ports.size() < JHS_PORTS_COUNT) {
+          // use provided ports
+          useOffersPorts = true;
+          ports = getAvailablePorts(offer, JHS_PORTS_COUNT);
+          LOGGER.info("No specified ports found or number of specified ports is not enough. Using ports from Mesos Offers: {}", ports);
         } else {
-          LOGGER.info("Number of specified ports is not enough. Using JobHistoryServer default ports");
+          useOffersPorts = false;
+          LOGGER.info("Using ports from configuration: {}", ports);
+        }
+        
+        int i = 0;
+        for (Long port : ports) {
+          strB.append("-D" + JHS_ADDRESSES[i++] + "=" + jhsHostName + ":" + port + " ");
         }
         
         strB.append(jsEnv);
@@ -141,10 +144,10 @@ import com.google.common.base.Strings;
                 .setScalar(taskMemory)
                 .build());
         
-        // set ports
-        if (returnedPorts != null && !returnedPorts.isEmpty()) {
+        if (useOffersPorts) {
+          // set ports
           Value.Ranges.Builder valueRanger = Value.Ranges.newBuilder();
-          for (Long port : returnedPorts) {
+          for (Long port : ports) {
             valueRanger.addRange(Value.Range.newBuilder()
                     .setBegin(port)
                     .setEnd(port));
@@ -275,52 +278,33 @@ import com.google.common.base.Strings;
        * @param requestedPorts
        * @return
        */
-      private List<Long> getAvailablePorts(Offer offer, List<Long> requestedPorts) {
-        if (requestedPorts == null || requestedPorts.isEmpty()) {
+      private List<Long> getAvailablePorts(Offer offer, int requestedPorts) {
+        if (requestedPorts == 0) {
           return null;
         }
         final List<Long> returnedPorts = new ArrayList<>();
-        boolean [] retValue = new boolean[requestedPorts.size()];
         for (Resource resource : offer.getResourcesList()){
           if (resource.getName().equals("ports")){
             Iterator<Value.Range> itr = resource.getRanges().getRangeList().iterator();
-            int l = 0;
             while (itr.hasNext()) {
               Value.Range range = itr.next();
               if (range.getBegin() <= range.getEnd()) {
-                for (int k = 0; k < requestedPorts.size(); k++) {
-                  final Long port = requestedPorts.get(k);
-                  if (port <= range.getEnd() && port >= range.getBegin()) {
-                    retValue[k] = true;
-                    l++;
-                  }
-                  if (l >= requestedPorts.size()) {
-                    return requestedPorts;
-                  }
-                }
-                // fill up some ports in case we won't find ones we need
                 long i = range.getBegin();
-                while (i <= range.getEnd() && returnedPorts.size() < requestedPorts.size()) {
+                while (i <= range.getEnd() && returnedPorts.size() < requestedPorts) {
                   returnedPorts.add(i);
                   i++;
+                }
+                if (returnedPorts.size() >= requestedPorts) { 
+                  return returnedPorts;
                 }
               }
             }
           }
         }
-        // in case we managed to get some required ports
-        // set to random only ones we could not set to requested
-        for (int j = 0; j < retValue.length; j++) {
-          if (retValue[j]) {
-            returnedPorts.set(j, requestedPorts.get(j));
-          } else {
-            // TODO (yfeldman) need to make this more visible
-            LOGGER.info("Following port: {} is not available will use {} port instead", 
-                requestedPorts.get(j), returnedPorts.get(j));
-          }
-        }
+        // this is actually an error condition - we did not have enough ports to use
         return returnedPorts;
       }
+
       @Override
       public ExecutorInfo getExecutorInfoForSlave(FrameworkID frameworkId, Offer offer,
           CommandInfo commandInfo) {
