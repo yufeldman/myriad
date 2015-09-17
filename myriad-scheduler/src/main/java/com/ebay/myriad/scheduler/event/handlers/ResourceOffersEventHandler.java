@@ -15,6 +15,7 @@
  */
 package com.ebay.myriad.scheduler.event.handlers;
 
+import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.scheduler.NMProfile;
 import com.ebay.myriad.scheduler.SchedulerUtils;
 import com.ebay.myriad.scheduler.TaskConstraints;
@@ -163,18 +164,23 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
     private boolean checkAggregates(Offer offer, NodeTask taskToLaunch, int ports, double cpus, double mem) {
         Map<String, String> requestAttributes = new HashMap<>();
         final String taskPrefix = taskToLaunch.getTaskPrefix();
-        final double aggrCpu = taskUtils.getAuxTaskCpus(taskToLaunch.getProfile(), taskPrefix);
-        final double aggrMem = taskUtils.getAuxTaskMemory(taskToLaunch.getProfile(), taskPrefix);
-        final TaskConstraints taskConstraints = taskFactoryMap.get(taskPrefix).getConstraints();
-        if (aggrCpu <= cpus
-                && aggrMem <= mem
-                && SchedulerUtils.isMatchSlaveAttributes(offer, requestAttributes)
-                && taskConstraints.portsCount() <= ports) {
-            return true;
-        } else {
-            LOGGER.info("Offer not sufficient for task with, cpu: {}, memory: {}, ports: {}",
-                aggrCpu, aggrMem, ports);
-            return false;
+        try {
+          final double aggrCpu = taskUtils.getAuxTaskCpus(taskToLaunch.getProfile(), taskPrefix);
+          final double aggrMem = taskUtils.getAuxTaskMemory(taskToLaunch.getProfile(), taskPrefix);
+          final TaskConstraints taskConstraints = taskFactoryMap.get(taskPrefix).getConstraints();
+          if (aggrCpu <= cpus
+                  && aggrMem <= mem
+                  && SchedulerUtils.isMatchSlaveAttributes(offer, requestAttributes)
+                  && taskConstraints.portsCount() <= ports) {
+              return true;
+          } else {
+              LOGGER.info("Offer not sufficient for task with, cpu: {}, memory: {}, ports: {}",
+                  aggrCpu, aggrMem, ports);
+              return false;
+          }
+        } catch (MyriadBadConfigurationException mce) {
+          LOGGER.error(mce.getMessage());
+          return false;
         }
     }
 

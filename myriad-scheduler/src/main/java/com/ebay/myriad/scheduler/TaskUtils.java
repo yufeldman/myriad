@@ -16,6 +16,7 @@
 package com.ebay.myriad.scheduler;
 
 import com.ebay.myriad.configuration.AuxTaskConfiguration;
+import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
 import com.ebay.myriad.configuration.NodeManagerConfiguration;
@@ -184,30 +185,32 @@ public class TaskUtils {
         return getAggregateMemory(profile) - getExecutorMemory();
     }
 
-    public double getAuxTaskCpus(NMProfile profile, String taskName) {
-      if (taskName.startsWith("nm.")) {
+    public double getAuxTaskCpus(NMProfile profile, String taskName) throws MyriadBadConfigurationException {
+      if (taskName.startsWith(NodeManagerConfiguration.NM_TASK_PREFIX)) {
         return getAggregateCpus(profile);
       }
       AuxTaskConfiguration auxConf = cfg.getAuxTaskConfiguration(taskName);
       if (auxConf == null) {
-        // TODO (yufeldman) throw exception
-        return 0;
+        throw new MyriadBadConfigurationException("Can not find profile for task name: " + taskName);
       }
-      // TODO (yufeldman) throw exception if cpu is not defined
-      return (auxConf.getCpus().isPresent() ? auxConf.getCpus().get() : 0);
+      if (!auxConf.getCpus().isPresent()) {
+        throw new MyriadBadConfigurationException("cpu is not defined for task with name: " + taskName);
+      }
+      return auxConf.getCpus().get();
     }
     
-    public double getAuxTaskMemory(NMProfile profile, String taskName) {
-      if (taskName.startsWith("nm.")) {
+    public double getAuxTaskMemory(NMProfile profile, String taskName) throws MyriadBadConfigurationException {
+      if (taskName.startsWith(NodeManagerConfiguration.NM_TASK_PREFIX)) {
         return getAggregateMemory(profile);
       }
       AuxTaskConfiguration auxConf = cfg.getAuxTaskConfiguration(taskName);
       if (auxConf == null) {
-        // TODO (yufeldman) throw exception
-        return 0;
+        throw new MyriadBadConfigurationException("Can not find profile for task name: " + taskName);
       }
-      // TODO (yufeldman) throw exception if cpu is not defined
-      return (auxConf.getJvmMaxMemoryMB().isPresent() ? auxConf.getJvmMaxMemoryMB().get() : 0);
+      if (!auxConf.getJvmMaxMemoryMB().isPresent()) {
+        throw new MyriadBadConfigurationException("memory is not defined for task with name: " + taskName);        
+      }
+      return auxConf.getJvmMaxMemoryMB().get();
 
     }
 }
