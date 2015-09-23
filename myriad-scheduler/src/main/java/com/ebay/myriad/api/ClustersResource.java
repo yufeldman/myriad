@@ -71,11 +71,17 @@ public class ClustersResource {
         Integer instances = request.getInstances();
         String profile = request.getProfile();
 
+        // Validate profile request
+        Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
+
+        Preconditions.checkNotNull(instances,
+            "instances object cannot be null or empty");
+        Preconditions.checkNotNull(profile,
+            "profile object cannot be null or empty");
+
         LOGGER.info("Instances: {}", instances);
         LOGGER.info("Profile: {}", profile);
 
-        // Validate profile request
-        Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
         if (!this.profileManager.exists(profile)) {
             response.status(Response.Status.BAD_REQUEST)
                     .entity("Profile does not exist: " + profile);
@@ -109,6 +115,10 @@ public class ClustersResource {
         LOGGER.info("Instances: " + instances);
 
         Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
+        
+        Preconditions.checkNotNull(instances,
+            "instances object cannot be null or empty");
+
 
         if (!this.isValidInstanceSize(instances)) {
             response.status(Response.Status.BAD_REQUEST)
