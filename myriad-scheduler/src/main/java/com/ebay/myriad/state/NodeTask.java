@@ -15,16 +15,17 @@
  */
 package com.ebay.myriad.state;
 
-import com.ebay.myriad.scheduler.NMProfile;
+import com.ebay.myriad.scheduler.ServiceResourceProfile;
+import com.ebay.myriad.scheduler.TaskUtils;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.Inject;
+
 import org.apache.mesos.Protos;
 
 /**
  * Represents a task to be launched by the executor
  */
 public class NodeTask {
-    @JsonProperty
-    private NMProfile profile;
     @JsonProperty
     private String hostname;
     @JsonProperty
@@ -33,15 +34,19 @@ public class NodeTask {
     private Protos.TaskStatus taskStatus;
     @JsonProperty
     private String taskPrefix;
+    @JsonProperty
+    private ServiceResourceProfile serviceresourceProfile;
 
+    @Inject
+    TaskUtils taskUtils;
     /**
      * Mesos executor for this node.
      */
     private Protos.ExecutorInfo executorInfo;
 
-    public NodeTask(NMProfile profile) {
-        this.profile = profile;
-        this.hostname = "";
+    public NodeTask(ServiceResourceProfile profile) {
+      this.serviceresourceProfile = profile;
+      this.hostname = "";
     }
 
     public Protos.SlaveID getSlaveId() {
@@ -50,14 +55,6 @@ public class NodeTask {
 
     public void setSlaveId(Protos.SlaveID slaveId) {
         this.slaveId = slaveId;
-    }
-
-    public NMProfile getProfile() {
-        return profile;
-    }
-
-    public void setProfile(NMProfile profile) {
-        this.profile = profile;
     }
 
     public String getHostname() {
@@ -90,5 +87,13 @@ public class NodeTask {
 
     public void setTaskPrefix(String taskPrefix) {
       this.taskPrefix = taskPrefix;
+    }
+
+    public ServiceResourceProfile getProfile() {
+      return serviceresourceProfile;
+    }
+
+    public void setProfile(ServiceResourceProfile serviceresourceProfile) {
+      this.serviceresourceProfile = serviceresourceProfile;
     }
 }

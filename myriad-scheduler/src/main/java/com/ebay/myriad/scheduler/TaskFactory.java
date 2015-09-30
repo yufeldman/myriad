@@ -124,7 +124,7 @@ public interface TaskFactory {
       }
     }
 
-    private CommandInfo getCommandInfo(NMProfile profile, NMPorts ports) {
+    private CommandInfo getCommandInfo(ServiceResourceProfile profile, NMPorts ports) {
       MyriadExecutorConfiguration myriadExecutorConfiguration = cfg.getMyriadExecutorConfiguration();
       CommandInfo.Builder commandInfo = CommandInfo.newBuilder();
       String cmd;
@@ -171,15 +171,15 @@ public interface TaskFactory {
       NMPorts ports = getPorts(offer);
       LOGGER.debug(ports.toString());
 
-      NMProfile profile = nodeTask.getProfile();
+      ServiceResourceProfile serviceProfile = nodeTask.getProfile();
       Scalar taskMemory = Scalar.newBuilder()
-          .setValue(taskUtils.getTaskMemory(profile))
+          .setValue(serviceProfile.getAggregateMemory())
           .build();
       Scalar taskCpus = Scalar.newBuilder()
-          .setValue(taskUtils.getTaskCpus(profile))
+          .setValue(serviceProfile.getAggregateCpu())
           .build();
 
-      CommandInfo commandInfo = getCommandInfo(profile, ports);
+      CommandInfo commandInfo = getCommandInfo(serviceProfile, ports);
       ExecutorInfo executorInfo = getExecutorInfoForSlave(frameworkId, offer, commandInfo);
 
       TaskInfo.Builder taskBuilder = TaskInfo.newBuilder()

@@ -24,7 +24,7 @@ import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.scheduler.MyriadOperations;
-import com.ebay.myriad.scheduler.NMProfileManager;
+import com.ebay.myriad.scheduler.ServiceProfileManager;
 import com.ebay.myriad.state.SchedulerState;
 import com.google.common.base.Preconditions;
 
@@ -48,13 +48,13 @@ public class ClustersResource {
 
     private MyriadConfiguration cfg;
     private SchedulerState schedulerState;
-    private NMProfileManager profileManager;
+    private ServiceProfileManager profileManager;
     private MyriadOperations myriadOperations;
 
     @Inject
     public ClustersResource(MyriadConfiguration cfg,
                             SchedulerState state,
-                            NMProfileManager profileManager,
+                            ServiceProfileManager profileManager,
                             MyriadOperations myriadOperations) {
         this.cfg = cfg;
         this.schedulerState = state;
@@ -119,7 +119,7 @@ public class ClustersResource {
       // Validate profile request
       Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
       
-      if (!this.profileManager.exists(profile)) {
+      if (cfg.getAuxTaskConfiguration(profile) != null) {
         response.status(Response.Status.BAD_REQUEST)
                 .entity("Sevrice does not exist: " + profile);
         LOGGER.error("Provided service does not exist " + profile);

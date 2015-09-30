@@ -42,13 +42,13 @@ public class MyriadOperations {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyriadOperations.class);
     private final SchedulerState schedulerState;
     private MyriadConfiguration cfg;
-    private NMProfileManager profileManager;
+    private ServiceProfileManager profileManager;
     private NodeScaleDownPolicy nodeScaleDownPolicy;
 
     @Inject
     public MyriadOperations(MyriadConfiguration cfg,
                             SchedulerState schedulerState,
-                            NMProfileManager profileManager,
+                            ServiceProfileManager profileManager,
                             NodeScaleDownPolicy nodeScaleDownPolicy) {
         this.cfg = cfg;
         this.schedulerState = schedulerState;
@@ -74,12 +74,11 @@ public class MyriadOperations {
      * @param profileName
      */
     public void flexUpAService(int instances, String profileName) throws MyriadBadConfigurationException {
-      final NMProfile nmProfile;
-      if (profileName == null || (nmProfile = profileManager.get(profileName)) == null) {
+      final AuxTaskConfiguration auxTaskConf = cfg.getAuxTaskConfiguration(profileName);
+      if (profileName == null || auxTaskConf == null) {
         throw new MyriadBadConfigurationException("Specified profile is invalid: " + profileName);
       }
       
-      AuxTaskConfiguration auxTaskConf = cfg.getAuxTaskConfiguration(profileName);
       int totalflexInstances = instances + getFlexibleInstances(profileName);
       
       Integer maxInstances = auxTaskConf.getMaxInstances().orNull();
@@ -94,9 +93,12 @@ public class MyriadOperations {
         }
       }
 
+      final Double cpu = auxTaskConf.getCpus().or(AuxTaskConfiguration.DEFAULT_CPU);
+      final Double mem = auxTaskConf.getJvmMaxMemoryMB().or(AuxTaskConfiguration.DEFAULT_MEMORY);
+      
       Collection<NodeTask> nodes = new HashSet<>();
       for (int i = 0; i < instances; i++) {
-        NodeTask nodeTask = new NodeTask(nmProfile);
+        NodeTask nodeTask = new NodeTask(new ServiceResourceProfile(profileName, cpu, mem));
         nodeTask.setTaskPrefix(profileName);
         nodes.add(nodeTask);
       }

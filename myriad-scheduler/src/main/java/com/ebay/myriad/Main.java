@@ -24,12 +24,15 @@ import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.health.MesosDriverHealthCheck;
 import com.ebay.myriad.health.MesosMasterHealthCheck;
 import com.ebay.myriad.health.ZookeeperHealthCheck;
+import com.ebay.myriad.scheduler.ExtendedResourceProfile;
 import com.ebay.myriad.scheduler.MyriadDriverManager;
 import com.ebay.myriad.scheduler.MyriadOperations;
 import com.ebay.myriad.scheduler.NMProfile;
-import com.ebay.myriad.scheduler.NMProfileManager;
 import com.ebay.myriad.scheduler.Rebalancer;
+import com.ebay.myriad.scheduler.ServiceProfileManager;
+import com.ebay.myriad.scheduler.ServiceResourceProfile;
 import com.ebay.myriad.scheduler.TaskTerminator;
+import com.ebay.myriad.scheduler.TaskUtils;
 import com.ebay.myriad.scheduler.yarn.interceptor.InterceptorRegistry;
 import com.ebay.myriad.webapp.MyriadWebServer;
 import com.ebay.myriad.webapp.WebAppGuiceModule;
@@ -144,8 +147,9 @@ public class Main {
 
     private void initProfiles(Injector injector) {
         LOGGER.info("Initializing Profiles");
-        NMProfileManager profileManager = injector.getInstance(NMProfileManager.class);
+        ServiceProfileManager profileManager = injector.getInstance(ServiceProfileManager.class);
         Map<String, Map<String, String>> profiles = injector.getInstance(MyriadConfiguration.class).getProfiles();
+        TaskUtils taskUtils = injector.getInstance(TaskUtils.class);
         if (MapUtils.isNotEmpty(profiles)) {
             for (Map.Entry<String, Map<String, String>> profile : profiles.entrySet()) {
                 Map<String, String> profileResourceMap = profile.getValue();
@@ -155,7 +159,12 @@ public class Main {
                     Double cpu = Double.parseDouble(profileResourceMap.get("cpu"));
                     Double mem = Double.parseDouble(profileResourceMap.get("mem"));
 
-                    profileManager.add(new NMProfile(profile.getKey(), cpu, mem));
+                    ServiceResourceProfile serviceProfile = new ExtendedResourceProfile(new NMProfile(profile.getKey(), cpu, mem), 
+                        taskUtils.getNodeManagerCpus(), taskUtils.getNodeManagerMemory());
+                    serviceProfile.setExecutorCpu(taskUtils.getExecutorCpus());
+                    serviceProfile.setExecutorMemory(taskUtils.getExecutorMemory());
+                    
+                    profileManager.add(serviceProfile);
                 } else {
                     LOGGER.error("Invalid definition for profile: " + profile.getKey());
                 }
@@ -166,19 +175,20 @@ public class Main {
     private void validateNMInstances(Injector injector) {
         LOGGER.info("Validating nmInstances..");
         Map<String, Integer> nmInstances = injector.getInstance(MyriadConfiguration.class).getNmInstances();
-        NMProfileManager profileManager = injector.getInstance(NMProfileManager.class);
+        ServiceProfileManager profileManager = injector.getInstance(ServiceProfileManager.class);
+
         long maxCpu = Long.MIN_VALUE;
         long maxMem = Long.MIN_VALUE;
         for (Map.Entry<String, Integer> entry : nmInstances.entrySet()) {
           String profile = entry.getKey();
-          NMProfile nmProfile = profileManager.get(profile);
-          if (nmProfile == null) {
+          ServiceResourceProfile nodeManager = profileManager.get(profile);
+          if (nodeManager == null) {
             throw new RuntimeException("Invalid profile name '" + profile + "' specified in 'nmInstances'");
           }
           if (entry.getValue() > 0) {
-            if (nmProfile.getCpus() > maxCpu) { // find the profile with largest number of cpus
-              maxCpu = nmProfile.getCpus().longValue();
-              maxMem = nmProfile.getMemory().longValue(); // use the memory from the same profile
+            if (nodeManager.getCpus() > maxCpu) { // find the profile with largest number of cpus
+              maxCpu = nodeManager.getCpus().longValue();
+              maxMem = nodeManager.getMemory().longValue(); // use the memory from the same profile
             }
           }
         }
@@ -202,7 +212,7 @@ public class Main {
      */
     private void initJavaBasedTaskConfiguration(Injector injector) {
       LOGGER.info("Initializing JavaBasedTaskConfiguration");
-      NMProfileManager profileManager = injector.getInstance(NMProfileManager.class);
+      ServiceProfileManager profileManager = injector.getInstance(ServiceProfileManager.class);
 
       Map<String, AuxTaskConfiguration> auxServicesConfigs = 
           injector.getInstance(MyriadConfiguration.class).getAuxTaskConfigurations();
@@ -212,7 +222,7 @@ public class Main {
           final Double cpu = config.getCpus().or(AuxTaskConfiguration.DEFAULT_CPU);
           final Double mem = config.getJvmMaxMemoryMB().or(AuxTaskConfiguration.DEFAULT_MEMORY);
           
-          profileManager.add(new NMProfile(entry.getKey(), cpu, mem));
+          profileManager.add(new ServiceResourceProfile(entry.getKey(), cpu, mem));
         }
       }
     }

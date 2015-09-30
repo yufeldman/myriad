@@ -27,6 +27,8 @@ import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * Tests for TaskUtils
@@ -66,6 +68,30 @@ public class TestTaskUtils {
     } catch (MyriadBadConfigurationException e) {
       fail("cpu should be defined for jobhistory");
     }    
+  }
+  
+  @Test
+  public void testServiceResourceProfile() throws Exception {
+    // testing custom deserializer
+    
+    Gson gson = new GsonBuilder().registerTypeAdapter(ServiceResourceProfile.class, new ServiceResourceProfile.CustomDeserializer()).create();
+    
+
+    ServiceResourceProfile parentProfile = new ServiceResourceProfile("abc", 1.0, 100.0);
+
+    String parentStr = gson.toJson(parentProfile);
+    ServiceResourceProfile processedProfile = gson.fromJson(parentStr, ServiceResourceProfile.class);
+    
+    assertTrue(processedProfile.getClass().equals(ServiceResourceProfile.class));
+    assertTrue(processedProfile.toString().equalsIgnoreCase(parentStr));
+    
+    ServiceResourceProfile childProfile = new ExtendedResourceProfile(new NMProfile("bcd", 5.0, 15.0), 2.0, 7.0);
+    
+    String childStr = gson.toJson(childProfile);
+    ServiceResourceProfile processedChildProfile = gson.fromJson(childStr, ServiceResourceProfile.class);
+
+    assertTrue(processedChildProfile instanceof ExtendedResourceProfile);
+    assertTrue(processedChildProfile.toString().equalsIgnoreCase(childStr));
   }
 
 }

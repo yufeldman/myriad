@@ -15,9 +15,8 @@
  */
 package com.ebay.myriad.scheduler.event.handlers;
 
-import com.ebay.myriad.configuration.MyriadBadConfigurationException;
-import com.ebay.myriad.scheduler.NMProfile;
 import com.ebay.myriad.scheduler.SchedulerUtils;
+import com.ebay.myriad.scheduler.ServiceResourceProfile;
 import com.ebay.myriad.scheduler.TaskConstraints;
 import com.ebay.myriad.scheduler.TaskFactory;
 import com.ebay.myriad.scheduler.TaskUtils;
@@ -88,7 +87,7 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
             NodeTask taskToLaunch = schedulerState
                 .getTask(pendingTaskId);
             String taskPrefix = taskToLaunch.getTaskPrefix();
-            NMProfile profile = taskToLaunch.getProfile();
+            ServiceResourceProfile profile = taskToLaunch.getProfile();
 
             if (matches(offer, taskToLaunch)
                 && SchedulerUtils.isUniqueHostname(offer, taskToLaunch,
@@ -163,24 +162,20 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
 
     private boolean checkAggregates(Offer offer, NodeTask taskToLaunch, int ports, double cpus, double mem) {
         Map<String, String> requestAttributes = new HashMap<>();
+        final ServiceResourceProfile profile = taskToLaunch.getProfile();
         final String taskPrefix = taskToLaunch.getTaskPrefix();
-        try {
-          final double aggrCpu = taskUtils.getAuxTaskCpus(taskToLaunch.getProfile(), taskPrefix);
-          final double aggrMem = taskUtils.getAuxTaskMemory(taskToLaunch.getProfile(), taskPrefix);
-          final TaskConstraints taskConstraints = taskFactoryMap.get(taskPrefix).getConstraints();
-          if (aggrCpu <= cpus
-                  && aggrMem <= mem
-                  && SchedulerUtils.isMatchSlaveAttributes(offer, requestAttributes)
-                  && taskConstraints.portsCount() <= ports) {
-              return true;
-          } else {
-              LOGGER.info("Offer not sufficient for task with, cpu: {}, memory: {}, ports: {}",
-                  aggrCpu, aggrMem, ports);
-              return false;
-          }
-        } catch (MyriadBadConfigurationException mce) {
-          LOGGER.error(mce.getMessage());
-          return false;
+        final double aggrCpu = profile.getAggregateCpu() + profile.getExecutorCpu();
+        final double aggrMem = profile.getAggregateMemory() + profile.getExecutorMemory();
+        final TaskConstraints taskConstraints = taskFactoryMap.get(taskPrefix).getConstraints();
+        if (aggrCpu <= cpus
+                && aggrMem <= mem
+                && SchedulerUtils.isMatchSlaveAttributes(offer, requestAttributes)
+                && taskConstraints.portsCount() <= ports) {
+            return true;
+        } else {
+            LOGGER.info("Offer not sufficient for task with, cpu: {}, memory: {}, ports: {}",
+                aggrCpu, aggrMem, ports);
+            return false;
         }
     }
 

@@ -39,7 +39,7 @@ class SchedulerUtilsSpec extends Specification {
 
 
     NodeTask createNodeTask(String hostname) {
-        def node = new NodeTask(new NMProfile("", 1, 1))
+        def node = new NodeTask(new ExtendedResourceProfile(new NMProfile("", 1, 1), 1,1))
         node.hostname = hostname
         node.taskPrefix = "nm"
         node

@@ -99,7 +99,7 @@ public class NMExecutorCLGenImpl implements ExecutorCommandLineGenerator {
   }
 
   @Override
-  public String generateCommandLine(NMProfile profile, NMPorts ports) {
+  public String generateCommandLine(ServiceResourceProfile profile, NMPorts ports) {
     StringBuilder cmdLine = new StringBuilder();
 
     generateEnvironment(profile, ports);
@@ -110,7 +110,7 @@ public class NMExecutorCLGenImpl implements ExecutorCommandLineGenerator {
     return cmdLine.toString();
   }
 
-  protected void generateEnvironment(NMProfile profile, NMPorts ports) {
+  protected void generateEnvironment(ServiceResourceProfile profile, NMPorts ports) {
     //yarnEnvironemnt configuration from yaml file
     Map<String, String> yarnEnvironmentMap = cfg.getYarnEnvironment();
     if (yarnEnvironmentMap != null) {
