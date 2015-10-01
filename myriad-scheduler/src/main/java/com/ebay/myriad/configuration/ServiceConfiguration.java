@@ -30,9 +30,9 @@ import com.google.common.base.Optional;
  * Configuration for any service/task to be started from Myriad Scheduler
  *
  */
-public class AuxTaskConfiguration {
+public class ServiceConfiguration {
   
-  private static final Logger LOGGER = LoggerFactory.getLogger(AuxTaskConfiguration.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ServiceConfiguration.class);
 
   public static final Double DEFAULT_CPU = 0.1;
   

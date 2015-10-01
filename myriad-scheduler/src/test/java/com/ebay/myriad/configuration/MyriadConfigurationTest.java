@@ -53,14 +53,14 @@ public class MyriadConfigurationTest {
   @Test
   public void additionalPropertiestest() throws Exception {
     
-    Map<String, AuxTaskConfiguration> auxConfigs = cfg.getAuxTaskConfigurations();
+    Map<String, ServiceConfiguration> auxConfigs = cfg.getServiceConfigurations();
     
     assertNotNull(auxConfigs);
     assertEquals(auxConfigs.size(), 2);
     
-    for (Map.Entry<String, AuxTaskConfiguration> entry : auxConfigs.entrySet()) {
+    for (Map.Entry<String, ServiceConfiguration> entry : auxConfigs.entrySet()) {
       String taskName = entry.getKey();
-      AuxTaskConfiguration config = entry.getValue();
+      ServiceConfiguration config = entry.getValue();
       String outTaskname = config.getTaskName();
       assertEquals(taskName, outTaskname);
     }

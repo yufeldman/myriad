@@ -30,7 +30,7 @@ executor:
   jvmMaxMemoryMB: 256
   path: file:///usr/local/libexec/mesos/myriad-executor-runnable-0.0.1.jar
   #The following should be used for a remotely distributed URI, hdfs assumed but other URI types valid.
-  #nodeManagerUri: hdfs://namenode:port/dist/hadoop-2.5.0.tar.gz
+  nodeManagerUri: hdfs://namenode:port/dist/hadoop-2.5.0.tar.gz
   #path: hdfs://namenode:port/dist/myriad-executor-runnable-0.0.1.jar
 yarnEnvironment:
   YARN_HOME: /usr/local/hadoop
@@ -38,7 +38,7 @@ yarnEnvironment:
   #JAVA_HOME: /usr/lib/jvm/java-default #System dependent, but sometimes necessary
 mesosAuthenticationPrincipal:
 mesosAuthenticationSecretFilename:
-auxTasks:
+services:
    jobhistory:
      taskFactoryImplName: com.ebay.myriad.scheduler.JHSTaskFactoryImpl
      jvmMaxMemoryMB: 1024

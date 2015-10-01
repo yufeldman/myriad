@@ -119,7 +119,7 @@ public class ClustersResource {
       // Validate profile request
       Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
       
-      if (cfg.getAuxTaskConfiguration(profile) != null) {
+      if (cfg.getServiceConfiguration(profile) != null) {
         response.status(Response.Status.BAD_REQUEST)
                 .entity("Sevrice does not exist: " + profile);
         LOGGER.error("Provided service does not exist " + profile);

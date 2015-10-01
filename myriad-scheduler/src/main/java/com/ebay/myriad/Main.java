@@ -18,7 +18,7 @@ package com.ebay.myriad;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
-import com.ebay.myriad.configuration.AuxTaskConfiguration;
+import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.health.MesosDriverHealthCheck;
@@ -214,13 +214,13 @@ public class Main {
       LOGGER.info("Initializing JavaBasedTaskConfiguration");
       ServiceProfileManager profileManager = injector.getInstance(ServiceProfileManager.class);
 
-      Map<String, AuxTaskConfiguration> auxServicesConfigs = 
-          injector.getInstance(MyriadConfiguration.class).getAuxTaskConfigurations();
+      Map<String, ServiceConfiguration> auxServicesConfigs = 
+          injector.getInstance(MyriadConfiguration.class).getServiceConfigurations();
       if (auxServicesConfigs != null) {
-        for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
-          AuxTaskConfiguration config = entry.getValue();
-          final Double cpu = config.getCpus().or(AuxTaskConfiguration.DEFAULT_CPU);
-          final Double mem = config.getJvmMaxMemoryMB().or(AuxTaskConfiguration.DEFAULT_MEMORY);
+        for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
+          ServiceConfiguration config = entry.getValue();
+          final Double cpu = config.getCpus().or(ServiceConfiguration.DEFAULT_CPU);
+          final Double mem = config.getJvmMaxMemoryMB().or(ServiceConfiguration.DEFAULT_MEMORY);
           
           profileManager.add(new ServiceResourceProfile(entry.getKey(), cpu, mem));
         }
@@ -262,11 +262,11 @@ public class Main {
      * @param injector
      */
     private void startJavaBasedTaskInstance(Injector injector) {
-      Map<String, AuxTaskConfiguration> auxServicesConfigs = 
-          injector.getInstance(MyriadConfiguration.class).getAuxTaskConfigurations();
+      Map<String, ServiceConfiguration> auxServicesConfigs = 
+          injector.getInstance(MyriadConfiguration.class).getServiceConfigurations();
       if (auxServicesConfigs != null) {
         MyriadOperations myriadOperations = injector.getInstance(MyriadOperations.class);
-        for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
+        for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
           try {
             myriadOperations.flexUpAService(entry.getValue().getMaxInstances().or(1), entry.getKey());
           } catch (MyriadBadConfigurationException e) {

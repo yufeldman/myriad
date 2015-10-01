@@ -15,7 +15,7 @@
  */
 package com.ebay.myriad;
 
-import com.ebay.myriad.configuration.AuxTaskConfiguration;
+import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
 import com.ebay.myriad.configuration.NodeManagerConfiguration;
@@ -102,9 +102,9 @@ public class MyriadModule extends AbstractModule {
         MapBinder<String, TaskFactory> mapBinder
         = MapBinder.newMapBinder(binder(), String.class, TaskFactory.class);
         mapBinder.addBinding(NodeManagerConfiguration.NM_TASK_PREFIX).to(NMTaskFactoryImpl.class).in(Scopes.SINGLETON);
-        Map<String, AuxTaskConfiguration> auxServicesConfigs = cfg.getAuxTaskConfigurations();
+        Map<String, ServiceConfiguration> auxServicesConfigs = cfg.getServiceConfigurations();
         if (auxServicesConfigs != null) {
-          for (Map.Entry<String, AuxTaskConfiguration> entry : auxServicesConfigs.entrySet()) {
+          for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
             String taskFactoryClass = entry.getValue().getTaskFactoryImplName();
             try {
               Class<? extends TaskFactory> implClass = (Class<? extends TaskFactory>) Class.forName(taskFactoryClass);

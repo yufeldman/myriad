@@ -94,4 +94,10 @@ public class TestTaskUtils {
     assertTrue(processedChildProfile.toString().equalsIgnoreCase(childStr));
   }
 
+  @Test
+  
+  public void testStackTrace() {
+    
+    new Throwable().printStackTrace();
+  }
 }

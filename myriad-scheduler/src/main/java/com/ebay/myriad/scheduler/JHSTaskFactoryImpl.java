@@ -26,7 +26,6 @@ import java.util.Objects;
 
 import javax.inject.Inject;
 
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.mesos.Protos.CommandInfo;
 import org.apache.mesos.Protos.ExecutorInfo;
 import org.apache.mesos.Protos.FrameworkID;
@@ -40,12 +39,11 @@ import org.apache.mesos.Protos.Value.Scalar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ebay.myriad.configuration.AuxTaskConfiguration;
+import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
 import com.ebay.myriad.state.NodeTask;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import com.google.common.annotations.VisibleForTesting;
 
   /**
    * Task creation class for JobHistoryServer
@@ -68,20 +66,22 @@ import com.google.common.base.Strings;
       @SuppressWarnings("unused")
       private TaskUtils taskUtils;
       private TaskConstraints constraints;
+      private ServiceCommandLineGenerator clGenerator;
 
       @Inject
       public JHSTaskFactoryImpl(MyriadConfiguration cfg, TaskUtils taskUtils) {
           this.cfg = cfg;
           this.taskUtils = taskUtils;
           this.constraints = new JHSTaskConstraints(cfg);
+          this.clGenerator = new ServiceCommandLineGenerator(cfg, cfg.getMyriadExecutorConfiguration().getNodeManagerUri().orNull());
       }
       @Override
       public TaskInfo createTask(Offer offer, FrameworkID frameworkId, TaskID taskId, NodeTask nodeTask) {
         Objects.requireNonNull(offer, "Offer should be non-null");
         Objects.requireNonNull(nodeTask, "NodeTask should be non-null");
 
-        AuxTaskConfiguration serviceConfig = 
-            cfg.getAuxTaskConfiguration(nodeTask.getTaskPrefix());
+        ServiceConfiguration serviceConfig = 
+            cfg.getServiceConfiguration(nodeTask.getTaskPrefix());
         
         if (serviceConfig == null) {
           return null;
@@ -117,7 +117,7 @@ import com.google.common.base.Strings;
         strB.append("\"");
         strB.append(" && $YARN_HOME/bin/mapred historyserver");
         
-        CommandInfo commandInfo = createCommandInfo(strB.toString());
+        CommandInfo commandInfo = createCommandInfo(nodeTask.getProfile(), strB.toString());
 
         LOGGER.info("Command line for JHS: {}", strB.toString());
         
@@ -161,7 +161,8 @@ import com.google.common.base.Strings;
         return taskBuilder.build();
       }
       
-      private CommandInfo createCommandInfo(String executorCmd) {
+      @VisibleForTesting
+      CommandInfo createCommandInfo(ServiceResourceProfile profile, String executorCmd) {
         MyriadExecutorConfiguration myriadExecutorConfiguration = cfg.getMyriadExecutorConfiguration();
         CommandInfo.Builder commandInfo = CommandInfo.newBuilder();
         String yarnHomeEnv = cfg.getYarnEnvironment().get("YARN_HOME");
@@ -174,13 +175,6 @@ import com.google.common.base.Strings;
         commandInfo.mergeEnvironment(yarnHomeB.build());
 
         if (myriadExecutorConfiguration.getNodeManagerUri().isPresent()) {
-                  /*
-                   TODO(darinj): Overall this is messier than I'd like. We can't let mesos untar the distribution, since
-                   it will change the permissions.  Instead we simply download the tarball and execute tar -xvpf. We also
-                   pull the config from the resource manager and put them in the conf dir.  This is also why we need
-                   frameworkSuperUser. This will be refactored after Mesos-1790 is resolved.
-                  */
-
           //Both FrameworkUser and FrameworkSuperuser to get all of the directory permissions correct.
           if (!(cfg.getFrameworkUser().isPresent() && cfg.getFrameworkSuperUser().isPresent())) {
             throw new RuntimeException("Trying to use remote distribution, but frameworkUser" +
@@ -188,31 +182,12 @@ import com.google.common.base.Strings;
           }
 
           LOGGER.info("Using remote distribution");
-
+          String clGeneratedCommand = clGenerator.generateCommandLine(profile, null);
+          
           String nmURIString = myriadExecutorConfiguration.getNodeManagerUri().get();
 
-          //TODO(DarinJ) support other compression, as this is a temp fix for Mesos 1760 may not get to it.
-          //Extract tarball keeping permissions, necessary to keep HADOOP_HOME/bin/container-executor suidbit set.
-          String tarCmd = "sudo tar -zxpf " + getFileName(nmURIString);
-
-          //We need the current directory to be writable by frameworkUser for capsuleExecutor to create directories.
-          //Best to simply give ownership to the user running the executor but we don't want to use -R as this
-          //will silently remove the suid bit on container executor.
-          String chownCmd = "sudo chown " + cfg.getFrameworkUser().get() + " .";
-
-          //Place the hadoop config where in the HADOOP_CONF_DIR where it will be read by the JHS
-          //The url for the resource manager config is: http(s)://hostname:port/conf so fetcher.cpp downloads the
-          //config file to conf, It's an xml file with the parameters of yarn-site.xml, core-site.xml, mapred-site.xml and hdfs.xml.
-          String configCopyCmd = "cp conf " + cfg.getYarnEnvironment().get("YARN_HOME") +
-              "/etc/hadoop/yarn-site.xml";
-
-          //Command to run the executor
-          String executorPathString = myriadExecutorConfiguration.getPath();
-          String sudoExecutorCmd = "sudo -E -u " + cfg.getFrameworkUser().get() + " -H " +
-              executorCmd;
-
           //Concatenate all the subcommands
-          String cmd = tarCmd + "&&" + chownCmd + "&&" + configCopyCmd + "&&" + sudoExecutorCmd;
+          String cmd = clGeneratedCommand + " " + executorCmd;
 
           //get the nodemanagerURI
           //We're going to extract ourselves, so setExtract is false
@@ -221,19 +196,13 @@ import com.google.common.base.Strings;
               .build();
 
           //get configs directly from resource manager
-          String configUrlString = getConfigurationUrl();
+          String configUrlString = clGenerator.getConfigurationUrl();
           LOGGER.info("Getting config from:" + configUrlString);
           URI configUri = URI.newBuilder().setValue(configUrlString)
               .build();
 
-          //get the executor URI
-          LOGGER.info("Getting executor from:" + executorPathString);
-          URI executorUri = URI.newBuilder().setValue(executorPathString).setExecutable(true)
-              .build();
-
           LOGGER.info("Slave will execute command:" + cmd);
-          commandInfo.addUris(nmUri).addUris(configUri).addUris(executorUri).setValue("echo \"" + cmd + "\";" + cmd);
-
+          commandInfo.addUris(nmUri).addUris(configUri).setValue("echo \"" + cmd + "\";" + cmd);
           commandInfo.setUser(cfg.getFrameworkSuperUser().get());
 
         } else {
@@ -242,36 +211,6 @@ import com.google.common.base.Strings;
         return commandInfo.build();
       }
       
-      private static String getFileName(String uri) {
-        int lastSlash = uri.lastIndexOf('/');
-        if (lastSlash == -1) {
-          return uri;
-        } else {
-          String fileName = uri.substring(lastSlash + 1);
-          Preconditions.checkArgument(!Strings.isNullOrEmpty(fileName),
-              "URI should not have a slash at the end");
-          return fileName;
-        }
-      }
-
-      private String getConfigurationUrl() {
-        YarnConfiguration conf = new YarnConfiguration();
-        String httpPolicy = conf.get(YARN_HTTP_POLICY);
-        if (httpPolicy != null && httpPolicy.equals(YARN_HTTP_POLICY_HTTPS_ONLY)) {
-          String address = conf.get(YARN_RESOURCEMANAGER_WEBAPP_HTTPS_ADDRESS);
-          if (address == null || address.isEmpty()) {
-            address = conf.get(YARN_RESOURCEMANAGER_HOSTNAME) + ":8090";
-          }
-          return "https://" + address + "/conf";
-        } else {
-          String address = conf.get(YARN_RESOURCEMANAGER_WEBAPP_ADDRESS);
-          if (address == null || address.isEmpty()) {
-            address = conf.get(YARN_RESOURCEMANAGER_HOSTNAME) + ":8088";
-          }
-          return "http://" + address + "/conf";
-        }
-      }
-
       /**
        * Helper method to reserve ports
        * @param offer
@@ -327,13 +266,13 @@ import com.google.common.base.Strings;
         
         JHSTaskConstraints(MyriadConfiguration cfg) {
           this.portsCount = 0;
-          Map<String, AuxTaskConfiguration> auxConfigs = cfg.getAuxTaskConfigurations();
+          Map<String, ServiceConfiguration> auxConfigs = cfg.getServiceConfigurations();
           if (auxConfigs == null) {
             return;
           }
           // it is overkill, but just in case name of the service is different from "jobhistory"
-          for (Map.Entry<String, AuxTaskConfiguration> auxConfig : auxConfigs.entrySet()) {
-            final AuxTaskConfiguration auxCfg = auxConfig.getValue();
+          for (Map.Entry<String, ServiceConfiguration> auxConfig : auxConfigs.entrySet()) {
+            final ServiceConfiguration auxCfg = auxConfig.getValue();
             if (JHSTaskFactoryImpl.class.getName().equals(auxCfg.getTaskFactoryImplName())) {
               if (auxCfg.getPorts() != null) {
                 this.portsCount = auxCfg.getPorts().size();

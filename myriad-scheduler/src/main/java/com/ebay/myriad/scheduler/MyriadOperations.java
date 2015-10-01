@@ -15,7 +15,7 @@
  */
 package com.ebay.myriad.scheduler;
 
-import com.ebay.myriad.configuration.AuxTaskConfiguration;
+import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.NodeManagerConfiguration;
@@ -74,7 +74,7 @@ public class MyriadOperations {
      * @param profileName
      */
     public void flexUpAService(int instances, String profileName) throws MyriadBadConfigurationException {
-      final AuxTaskConfiguration auxTaskConf = cfg.getAuxTaskConfiguration(profileName);
+      final ServiceConfiguration auxTaskConf = cfg.getServiceConfiguration(profileName);
       if (profileName == null || auxTaskConf == null) {
         throw new MyriadBadConfigurationException("Specified profile is invalid: " + profileName);
       }
@@ -93,8 +93,8 @@ public class MyriadOperations {
         }
       }
 
-      final Double cpu = auxTaskConf.getCpus().or(AuxTaskConfiguration.DEFAULT_CPU);
-      final Double mem = auxTaskConf.getJvmMaxMemoryMB().or(AuxTaskConfiguration.DEFAULT_MEMORY);
+      final Double cpu = auxTaskConf.getCpus().or(ServiceConfiguration.DEFAULT_CPU);
+      final Double mem = auxTaskConf.getJvmMaxMemoryMB().or(ServiceConfiguration.DEFAULT_MEMORY);
       
       Collection<NodeTask> nodes = new HashSet<>();
       for (int i = 0; i < instances; i++) {

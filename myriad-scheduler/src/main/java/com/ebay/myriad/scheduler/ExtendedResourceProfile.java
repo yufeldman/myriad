@@ -13,7 +13,7 @@ public class ExtendedResourceProfile extends ServiceResourceProfile {
 
   /**
    * 
-   * @param childProfile - should not be null
+   * @param childProfile - should be null
    * @param cpu
    * @param mem
    * will throw NullPoiterException if childProfile is null

@@ -15,7 +15,7 @@
  */
 package com.ebay.myriad.scheduler;
 
-import com.ebay.myriad.configuration.AuxTaskConfiguration;
+import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
@@ -189,7 +189,7 @@ public class TaskUtils {
       if (taskName.startsWith(NodeManagerConfiguration.NM_TASK_PREFIX)) {
         return getAggregateCpus(profile);
       }
-      AuxTaskConfiguration auxConf = cfg.getAuxTaskConfiguration(taskName);
+      ServiceConfiguration auxConf = cfg.getServiceConfiguration(taskName);
       if (auxConf == null) {
         throw new MyriadBadConfigurationException("Can not find profile for task name: " + taskName);
       }
@@ -203,7 +203,7 @@ public class TaskUtils {
       if (taskName.startsWith(NodeManagerConfiguration.NM_TASK_PREFIX)) {
         return getAggregateMemory(profile);
       }
-      AuxTaskConfiguration auxConf = cfg.getAuxTaskConfiguration(taskName);
+      ServiceConfiguration auxConf = cfg.getServiceConfiguration(taskName);
       if (auxConf == null) {
         throw new MyriadBadConfigurationException("Can not find profile for task name: " + taskName);
       }

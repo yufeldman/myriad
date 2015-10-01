@@ -9,6 +9,7 @@ import javax.inject.Inject;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.MyriadExecutorConfiguration;
 import com.ebay.myriad.state.NodeTask;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -124,7 +125,8 @@ public interface TaskFactory {
       }
     }
 
-    private CommandInfo getCommandInfo(ServiceResourceProfile profile, NMPorts ports) {
+    @VisibleForTesting
+    CommandInfo getCommandInfo(ServiceResourceProfile profile, NMPorts ports) {
       MyriadExecutorConfiguration myriadExecutorConfiguration = cfg.getMyriadExecutorConfiguration();
       CommandInfo.Builder commandInfo = CommandInfo.newBuilder();
       String cmd;
