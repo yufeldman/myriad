@@ -12,7 +12,6 @@ import com.ebay.myriad.state.NodeTask;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.mesos.Protos.CommandInfo;
 import org.apache.mesos.Protos.CommandInfo.URI;
 import org.apache.mesos.Protos.ExecutorID;
@@ -107,24 +106,6 @@ public interface TaskFactory {
       return new NMPorts(portArray);
     }
 
-    private String getConfigurationUrl() {
-      YarnConfiguration conf = new YarnConfiguration();
-      String httpPolicy = conf.get(YARN_HTTP_POLICY);
-      if (httpPolicy != null && httpPolicy.equals(YARN_HTTP_POLICY_HTTPS_ONLY)) {
-        String address = conf.get(YARN_RESOURCEMANAGER_WEBAPP_HTTPS_ADDRESS);
-        if (address == null || address.isEmpty()) {
-          address = conf.get(YARN_RESOURCEMANAGER_HOSTNAME) + ":8090";
-        }
-        return "https://" + address + "/conf";
-      } else {
-        String address = conf.get(YARN_RESOURCEMANAGER_WEBAPP_ADDRESS);
-        if (address == null || address.isEmpty()) {
-          address = conf.get(YARN_RESOURCEMANAGER_HOSTNAME) + ":8088";
-        }
-        return "http://" + address + "/conf";
-      }
-    }
-
     @VisibleForTesting
     CommandInfo getCommandInfo(ServiceResourceProfile profile, NMPorts ports) {
       MyriadExecutorConfiguration myriadExecutorConfiguration = cfg.getMyriadExecutorConfiguration();
@@ -146,7 +127,7 @@ public interface TaskFactory {
         URI nmUri = URI.newBuilder().setValue(nodeManagerUri).setExtract(false).build();
 
         //get configs directly from resource manager
-        String configUrlString = getConfigurationUrl();
+        String configUrlString = clGenerator.getConfigurationUrl();
         LOGGER.info("Getting config from:" + configUrlString);
         URI configUri = URI.newBuilder().setValue(configUrlString)
           .build();
