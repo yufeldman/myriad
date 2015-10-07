@@ -18,6 +18,7 @@ package com.ebay.myriad.scheduler.event.handlers;
 import com.ebay.myriad.scheduler.SchedulerUtils;
 import com.ebay.myriad.scheduler.ServiceResourceProfile;
 import com.ebay.myriad.scheduler.TaskConstraints;
+import com.ebay.myriad.scheduler.TaskConstraintsManager;
 import com.ebay.myriad.scheduler.TaskFactory;
 import com.ebay.myriad.scheduler.TaskUtils;
 import com.ebay.myriad.scheduler.event.ResourceOffersEvent;
@@ -68,6 +69,9 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
 
   @Inject
   private OfferLifecycleManager offerLifecycleMgr;
+  
+  @Inject
+  private TaskConstraintsManager taskConstraintsManager;
 
   @Override
   public void onEvent(ResourceOffersEvent event, long sequence,
@@ -166,7 +170,7 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
         final String taskPrefix = taskToLaunch.getTaskPrefix();
         final double aggrCpu = profile.getAggregateCpu() + profile.getExecutorCpu();
         final double aggrMem = profile.getAggregateMemory() + profile.getExecutorMemory();
-        final TaskConstraints taskConstraints = taskFactoryMap.get(taskPrefix).getConstraints();
+        final TaskConstraints taskConstraints = taskConstraintsManager.getConstraints(taskPrefix);
         if (aggrCpu <= cpus
                 && aggrMem <= mem
                 && SchedulerUtils.isMatchSlaveAttributes(offer, requestAttributes)

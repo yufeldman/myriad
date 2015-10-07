@@ -32,6 +32,8 @@ import com.ebay.myriad.scheduler.NMExecutorCLGenImpl;
 import com.ebay.myriad.scheduler.NMTaskFactoryAnnotation;
 import com.ebay.myriad.scheduler.ReconcileService;
 import com.ebay.myriad.scheduler.ServiceProfileManager;
+import com.ebay.myriad.scheduler.ServiceTaskFactoryImpl;
+import com.ebay.myriad.scheduler.TaskConstraintsManager;
 import com.ebay.myriad.scheduler.TaskFactory;
 import com.ebay.myriad.scheduler.TaskFactory.NMTaskFactoryImpl;
 import com.ebay.myriad.scheduler.fgs.YarnNodeCapacityManager;
@@ -91,6 +93,7 @@ public class MyriadModule extends AbstractModule {
         bind(DisruptorManager.class).in(Scopes.SINGLETON);
         bind(ReconcileService.class).in(Scopes.SINGLETON);
         bind(HttpConnectorProvider.class).in(Scopes.SINGLETON);
+        bind(TaskConstraintsManager.class).in(Scopes.SINGLETON);
         // add special binding between TaskFactory and NMTaskFactoryImpl to ease up 
         // usage of TaskFactory
         bind(TaskFactory.class).annotatedWith(NMTaskFactoryAnnotation.class).to(NMTaskFactoryImpl.class);
@@ -106,11 +109,15 @@ public class MyriadModule extends AbstractModule {
         if (auxServicesConfigs != null) {
           for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
             String taskFactoryClass = entry.getValue().getTaskFactoryImplName();
-            try {
-              Class<? extends TaskFactory> implClass = (Class<? extends TaskFactory>) Class.forName(taskFactoryClass);
-              mapBinder.addBinding(entry.getKey()).to(implClass).in(Scopes.SINGLETON);
-            } catch (ClassNotFoundException e) {
-              LOGGER.error("ClassNotFoundException", e);
+            if (taskFactoryClass != null) {
+              try {
+                Class<? extends TaskFactory> implClass = (Class<? extends TaskFactory>) Class.forName(taskFactoryClass);
+                mapBinder.addBinding(entry.getKey()).to(implClass).in(Scopes.SINGLETON);
+              } catch (ClassNotFoundException e) {
+                LOGGER.error("ClassNotFoundException", e);
+              }
+            } else {
+              mapBinder.addBinding(entry.getKey()).to(ServiceTaskFactoryImpl.class).in(Scopes.SINGLETON);
             }
           }
         }

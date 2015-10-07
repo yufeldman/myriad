@@ -40,14 +40,15 @@ mesosAuthenticationPrincipal:
 mesosAuthenticationSecretFilename:
 services:
    jobhistory:
-     taskFactoryImplName: com.ebay.myriad.scheduler.JHSTaskFactoryImpl
      jvmMaxMemoryMB: 1024
      cpus: 1
-     ports: [10033, 10020, 19888]
+     ports:
+       myriad.mapreduce.jobhistory.admin.address: -1
+       myriad.mapreduce.jobhistory.address: -1
+       myriad.mapreduce.jobhistory.webapp.address: -1
      envSettings: -Dcluster.name.prefix=/mycluster
      taskName: jobhistory
    timelineserver:
-     taskFactoryImplName: com.ebay.myriad.scheduler.TMSTaskFactoryImpl
      jvmMaxMemoryMB: 1024
      cpus: 1
      envSettings: -Dcluster.name.prefix=/mycluster2

@@ -41,7 +41,7 @@ public class TestServiceCommandLine {
 
   @Test
   public void testJHSCommandLineGeneration() throws Exception {
-    JHSTaskFactoryImpl jhs = new JHSTaskFactoryImpl(cfg, null);
+    ServiceTaskFactoryImpl jhs = new ServiceTaskFactoryImpl(cfg, null);
     String executorCmd = "$YARN_HOME/bin/mapred historyserver";
     ServiceResourceProfile profile = new ServiceResourceProfile("jobhistory", 10.0, 15.0);
     

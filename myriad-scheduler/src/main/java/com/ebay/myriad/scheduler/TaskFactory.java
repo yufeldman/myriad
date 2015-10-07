@@ -49,12 +49,6 @@ public interface TaskFactory {
     Offer offer, CommandInfo commandInfo);
   
   /**
-   * get Task specific constraints 
-   * @return ServiceConstraints
-   */
-  TaskConstraints getConstraints();
-
-  /**
    * Creates TaskInfo objects to launch NMs as mesos tasks.
    */
   class NMTaskFactoryImpl implements TaskFactory {
@@ -230,18 +224,13 @@ public interface TaskFactory {
                   .setScalar(executorMemory).build())
           .setExecutorId(executorId).build();
     }
-
-    @Override
-    public TaskConstraints getConstraints() {
-      return constraints;
-    }
   }
   
   /**
    * Implement NM Task Constraints
    *
    */
-  static class NMTaskConstraints implements TaskConstraints {
+  public static class NMTaskConstraints implements TaskConstraints {
 
     @Override
     public int portsCount() {

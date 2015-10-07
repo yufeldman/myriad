@@ -38,18 +38,11 @@ public class TMSTaskFactoryImpl implements TaskFactory {
 
   private MyriadConfiguration cfg;
   private TaskUtils taskUtils;
-  private TaskConstraints constraints;
 
   @Inject
   public TMSTaskFactoryImpl(MyriadConfiguration cfg, TaskUtils taskUtils) {
       this.setCfg(cfg);
       this.setTaskUtils(taskUtils);
-      this.constraints = new TaskConstraints() {
-
-        @Override
-        public int portsCount() {
-          return 0;
-        }};
   }
 
   @Override
@@ -79,10 +72,4 @@ public class TMSTaskFactoryImpl implements TaskFactory {
       Offer offer, CommandInfo commandInfo) {
     return null;
   }
-
-  @Override
-  public TaskConstraints getConstraints() {
-    return constraints;
-  }
-
 }

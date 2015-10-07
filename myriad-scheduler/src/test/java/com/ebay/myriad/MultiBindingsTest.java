@@ -53,6 +53,7 @@ public class MultiBindingsTest {
   @Test
   public void multiBindingsTest() {
     
+    
     MultiBindingsUsage myinstance = injector.getInstance(MultiBindingsUsage.class);
     
     Map<String, TaskFactory> taskMap = myinstance.getMap();
@@ -63,6 +64,7 @@ public class MultiBindingsTest {
     for (Map.Entry<String, TaskFactory> entry : taskMap.entrySet()) {
       String keyName = entry.getKey();
       TaskFactory taskFactory = entry.getValue();
+      System.out.println(taskFactory);
     }
     
     

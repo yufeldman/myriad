@@ -32,6 +32,7 @@ import com.ebay.myriad.scheduler.TaskFactory.NMTaskFactoryImpl;
 import com.ebay.myriad.scheduler.DownloadNMExecutorCLGenImpl;
 import com.ebay.myriad.scheduler.ExecutorCommandLineGenerator;
 import com.ebay.myriad.scheduler.NMExecutorCLGenImpl;
+import com.ebay.myriad.scheduler.ServiceTaskFactoryImpl;
 import com.ebay.myriad.scheduler.TaskFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -77,11 +78,15 @@ public class MyriadTestModule extends AbstractModule {
     Map<String, ServiceConfiguration> auxServicesConfigs = cfg.getServiceConfigurations();
     for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
       String taskFactoryClass = entry.getValue().getTaskFactoryImplName();
-      try {
-        Class<? extends TaskFactory> implClass = (Class<? extends TaskFactory>) Class.forName(taskFactoryClass);
-        mapBinder.addBinding(entry.getKey()).to(implClass).in(Scopes.SINGLETON);
-      } catch (ClassNotFoundException e) {
-        e.printStackTrace();
+      if (taskFactoryClass != null) {
+        try {
+          Class<? extends TaskFactory> implClass = (Class<? extends TaskFactory>) Class.forName(taskFactoryClass);
+          mapBinder.addBinding(entry.getKey()).to(implClass).in(Scopes.SINGLETON);
+        } catch (ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+      } else {
+        mapBinder.addBinding(entry.getKey()).to(ServiceTaskFactoryImpl.class).in(Scopes.SINGLETON);
       }
     }
   }

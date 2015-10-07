@@ -18,6 +18,7 @@ package com.ebay.myriad;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
+import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadBadConfigurationException;
 import com.ebay.myriad.configuration.MyriadConfiguration;
@@ -31,6 +32,9 @@ import com.ebay.myriad.scheduler.NMProfile;
 import com.ebay.myriad.scheduler.Rebalancer;
 import com.ebay.myriad.scheduler.ServiceProfileManager;
 import com.ebay.myriad.scheduler.ServiceResourceProfile;
+import com.ebay.myriad.scheduler.ServiceTaskConstraints;
+import com.ebay.myriad.scheduler.TaskConstraintsManager;
+import com.ebay.myriad.scheduler.TaskFactory;
 import com.ebay.myriad.scheduler.TaskTerminator;
 import com.ebay.myriad.scheduler.TaskUtils;
 import com.ebay.myriad.scheduler.yarn.interceptor.InterceptorRegistry;
@@ -102,7 +106,7 @@ public class Main {
         initHealthChecks(injector);
         initProfiles(injector);
         validateNMInstances(injector);
-        initJavaBasedTaskConfiguration(injector);
+        initJavaBasedTaskConfiguration(cfg, injector);
         initDisruptors(injector);
 
         initRebalancerService(cfg, injector);
@@ -148,6 +152,8 @@ public class Main {
     private void initProfiles(Injector injector) {
         LOGGER.info("Initializing Profiles");
         ServiceProfileManager profileManager = injector.getInstance(ServiceProfileManager.class);
+        TaskConstraintsManager taskConstraintsManager = injector.getInstance(TaskConstraintsManager.class);
+        taskConstraintsManager.addTaskConstraints(NodeManagerConfiguration.NM_TASK_PREFIX, new TaskFactory.NMTaskConstraints());
         Map<String, Map<String, String>> profiles = injector.getInstance(MyriadConfiguration.class).getProfiles();
         TaskUtils taskUtils = injector.getInstance(TaskUtils.class);
         if (MapUtils.isNotEmpty(profiles)) {
@@ -208,21 +214,25 @@ public class Main {
 
     /**
      * Create NMProfile for any configured service
+     * @param cfg 
      * @param injector
      */
-    private void initJavaBasedTaskConfiguration(Injector injector) {
+    private void initJavaBasedTaskConfiguration(MyriadConfiguration cfg, Injector injector) {
       LOGGER.info("Initializing JavaBasedTaskConfiguration");
       ServiceProfileManager profileManager = injector.getInstance(ServiceProfileManager.class);
+      TaskConstraintsManager taskConstraintsManager = injector.getInstance(TaskConstraintsManager.class);
 
       Map<String, ServiceConfiguration> auxServicesConfigs = 
           injector.getInstance(MyriadConfiguration.class).getServiceConfigurations();
       if (auxServicesConfigs != null) {
         for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
+          final String taskPrefix = entry.getKey();
           ServiceConfiguration config = entry.getValue();
           final Double cpu = config.getCpus().or(ServiceConfiguration.DEFAULT_CPU);
           final Double mem = config.getJvmMaxMemoryMB().or(ServiceConfiguration.DEFAULT_MEMORY);
           
-          profileManager.add(new ServiceResourceProfile(entry.getKey(), cpu, mem));
+          profileManager.add(new ServiceResourceProfile(taskPrefix, cpu, mem));
+          taskConstraintsManager.addTaskConstraints(taskPrefix, new ServiceTaskConstraints(cfg, taskPrefix));
         }
       }
     }

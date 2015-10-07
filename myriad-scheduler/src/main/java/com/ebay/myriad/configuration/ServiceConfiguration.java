@@ -18,7 +18,7 @@
 
 package com.ebay.myriad.configuration;
 
-import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,8 +57,13 @@ public class ServiceConfiguration {
   protected String jvmOpts;
 
   @JsonProperty
-  protected List<Long> ports;
+  protected Map<String, Long> ports;
   
+  /**
+   * If we will have some services
+   * that are not easy to express just by properties
+   * we can use this one to have a specific implementation
+   */
   @JsonProperty
   protected String taskFactoryImplName;
   
@@ -70,6 +75,12 @@ public class ServiceConfiguration {
   
   @JsonProperty
   protected Integer maxInstances;
+  
+  @JsonProperty
+  protected String command;
+  
+  @JsonProperty
+  protected String serviceOptsName;
   
   
   public Optional<Double> getJvmMaxMemoryMB() {
@@ -100,12 +111,20 @@ public class ServiceConfiguration {
     return envSettings;
   }
   
-  public List<Long> getPorts() {
+  public Map<String, Long> getPorts() {
     return ports;
   }
   
   public Optional<Integer> getMaxInstances() {
     return Optional.fromNullable(maxInstances);
+  }
+
+  public String getCommand() {
+    return command;
+  }
+
+  public String getServiceOpts() {
+    return serviceOptsName;
   }
 
 }
