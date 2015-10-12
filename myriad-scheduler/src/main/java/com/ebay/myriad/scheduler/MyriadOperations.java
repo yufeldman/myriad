@@ -15,8 +15,8 @@
  */
 package com.ebay.myriad.scheduler;
 
-import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadBadConfigurationException;
+import com.ebay.myriad.configuration.ServiceConfiguration;
 import com.ebay.myriad.configuration.MyriadConfiguration;
 import com.ebay.myriad.configuration.NodeManagerConfiguration;
 import com.ebay.myriad.policy.NodeScaleDownPolicy;
@@ -71,16 +71,12 @@ public class MyriadOperations {
     /**
      * Flexup a service
      * @param instances
-     * @param profileName
+     * @param serviceName
      */
-    public void flexUpAService(int instances, String profileName) throws MyriadBadConfigurationException {
-      final ServiceConfiguration auxTaskConf = cfg.getServiceConfiguration(profileName);
-      if (profileName == null || auxTaskConf == null) {
-        throw new MyriadBadConfigurationException("Specified profile is invalid: " + profileName);
-      }
+    public void flexUpAService(int instances, String serviceName) throws MyriadBadConfigurationException {
+      final ServiceConfiguration auxTaskConf = cfg.getServiceConfiguration(serviceName);
       
-      int totalflexInstances = instances + getFlexibleInstances(profileName);
-      
+      int totalflexInstances = instances + getFlexibleInstances(serviceName);
       Integer maxInstances = auxTaskConf.getMaxInstances().orNull();
       if (maxInstances != null && maxInstances > 0) {
         // check number of instances
@@ -88,8 +84,8 @@ public class MyriadOperations {
         if (totalflexInstances > maxInstances) {
           LOGGER.error("Current number of active, staging, pending and requested instances: {}"
               + ", while it is greater then max instances allowed: {}", totalflexInstances, maxInstances);
-          throw new MyriadBadConfigurationException("Current number of active, staging, pending instances and requested: "
-              + totalflexInstances + ", while it is greater then max instances allowed: " + maxInstances);          
+            throw new MyriadBadConfigurationException("Current number of active, staging, pending instances and requested: "
+            + totalflexInstances + ", while it is greater then max instances allowed: " + maxInstances);          
         }
       }
 
@@ -98,12 +94,12 @@ public class MyriadOperations {
       
       Collection<NodeTask> nodes = new HashSet<>();
       for (int i = 0; i < instances; i++) {
-        NodeTask nodeTask = new NodeTask(new ServiceResourceProfile(profileName, cpu, mem));
-        nodeTask.setTaskPrefix(profileName);
+        NodeTask nodeTask = new NodeTask(new ServiceResourceProfile(serviceName, cpu, mem));
+        nodeTask.setTaskPrefix(serviceName);
         nodes.add(nodeTask);
       }
 
-      LOGGER.info("Adding {} {} instances to cluster", nodes.size(), profileName);
+      LOGGER.info("Adding {} {} instances to cluster", nodes.size(), serviceName);
       this.schedulerState.addNodes(nodes);
     }
     
@@ -112,26 +108,25 @@ public class MyriadOperations {
      * @param numInstancesToScaleDown
      * @param serviceName - name of the service
      */
-    public void flexDownAService(int numInstancesToScaleDown, String serviceName) throws MyriadBadConfigurationException {
+    public void flexDownAService(int numInstancesToScaleDown, String serviceName) {
       LOGGER.info("About to flex down {} instances of {}", numInstancesToScaleDown, serviceName);
 
       int numScaledDown = 0;
-      Set<NodeTask> activeTasks = Sets.newHashSet(this.schedulerState.getActiveTasksByType(serviceName));
+      
+      // Flex down Pending tasks, if any
+      if (numScaledDown < numInstancesToScaleDown) {
+        Set<Protos.TaskID> pendingTasks = Sets.newHashSet(this.schedulerState.getPendingTaskIds(serviceName));
 
-      for (NodeTask nodeTask : activeTasks) {
-        this.schedulerState.makeTaskKillable(nodeTask.getTaskStatus().getTaskId());
-        numScaledDown++;
-        if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("Marked NodeTask {} on host {} for kill.",
-              nodeTask.getTaskStatus().getTaskId(), nodeTask.getHostname());
-        }
-        if (numScaledDown >= numInstancesToScaleDown) {
-          break;
+        for (Protos.TaskID taskId : pendingTasks) {
+            this.schedulerState.makeTaskKillable(taskId);
+            numScaledDown++;
+            if (numScaledDown >= numInstancesToScaleDown) {
+                break;
+            }
         }
       }
+      int numPendingTasksScaledDown = numScaledDown;
       
-      int numActiveTasksScaledDown = numScaledDown;
-
       // Flex down Staging tasks, if any
       if (numScaledDown < numInstancesToScaleDown) {
           Set<Protos.TaskID> stagingTasks = Sets.newHashSet(this.schedulerState.getStagingTaskIds(serviceName));
@@ -139,27 +134,28 @@ public class MyriadOperations {
           for (Protos.TaskID taskId : stagingTasks) {
               this.schedulerState.makeTaskKillable(taskId);
               numScaledDown++;
-              if (numScaledDown == numInstancesToScaleDown) {
+              if (numScaledDown >= numInstancesToScaleDown) {
                   break;
               }
           }
       }
-      int numStagingTasksScaledDown = numScaledDown - numActiveTasksScaledDown;
+      int numStagingTasksScaledDown = numScaledDown - numPendingTasksScaledDown;
 
-      // Flex down Pending tasks, if any
+      Set<NodeTask> activeTasks = Sets.newHashSet(this.schedulerState.getActiveTasksByType(serviceName));
       if (numScaledDown < numInstancesToScaleDown) {
-          Set<Protos.TaskID> pendingTasks = Sets.newHashSet(this.schedulerState.getPendingTaskIds(serviceName));
-
-          for (Protos.TaskID taskId : pendingTasks) {
-              this.schedulerState.makeTaskKillable(taskId);
-              numScaledDown++;
-              if (numScaledDown == numInstancesToScaleDown) {
-                  break;
-              }
+        for (NodeTask nodeTask : activeTasks) {
+          this.schedulerState.makeTaskKillable(nodeTask.getTaskStatus().getTaskId());
+          numScaledDown++;
+          if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Marked NodeTask {} on host {} for kill.",
+                nodeTask.getTaskStatus().getTaskId(), nodeTask.getHostname());
           }
+          if (numScaledDown >= numInstancesToScaleDown) {
+            break;
+          }
+        }
       }
-      int numPendingTasksScaledDown = numScaledDown - numStagingTasksScaledDown;
-
+      
       LOGGER.info("Flexed down {} of {} instances including {} staging instances, and {} pending instances of {}",
               numScaledDown, numInstancesToScaleDown, numStagingTasksScaledDown, numPendingTasksScaledDown, serviceName);
     }

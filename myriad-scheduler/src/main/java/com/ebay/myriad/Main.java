@@ -106,7 +106,7 @@ public class Main {
         initHealthChecks(injector);
         initProfiles(injector);
         validateNMInstances(injector);
-        initJavaBasedTaskConfiguration(cfg, injector);
+        initServiceConfigurations(cfg, injector);
         initDisruptors(injector);
 
         initRebalancerService(cfg, injector);
@@ -162,8 +162,8 @@ public class Main {
                 if (MapUtils.isNotEmpty(profiles)
                         && profileResourceMap.containsKey("cpu")
                         && profileResourceMap.containsKey("mem")) {
-                    Double cpu = Double.parseDouble(profileResourceMap.get("cpu"));
-                    Double mem = Double.parseDouble(profileResourceMap.get("mem"));
+                    Long cpu = Long.parseLong(profileResourceMap.get("cpu"));
+                    Long mem = Long.parseLong(profileResourceMap.get("mem"));
 
                     ServiceResourceProfile serviceProfile = new ExtendedResourceProfile(new NMProfile(profile.getKey(), cpu, mem), 
                         taskUtils.getNodeManagerCpus(), taskUtils.getNodeManagerMemory());
@@ -213,19 +213,19 @@ public class Main {
     }
 
     /**
-     * Create NMProfile for any configured service
+     * Create ServiceProfile for any configured service
      * @param cfg 
      * @param injector
      */
-    private void initJavaBasedTaskConfiguration(MyriadConfiguration cfg, Injector injector) {
-      LOGGER.info("Initializing JavaBasedTaskConfiguration");
+    private void initServiceConfigurations(MyriadConfiguration cfg, Injector injector) {
+      LOGGER.info("Initializing initServiceConfigurations");
       ServiceProfileManager profileManager = injector.getInstance(ServiceProfileManager.class);
       TaskConstraintsManager taskConstraintsManager = injector.getInstance(TaskConstraintsManager.class);
 
-      Map<String, ServiceConfiguration> auxServicesConfigs = 
+      Map<String, ServiceConfiguration> servicesConfigs = 
           injector.getInstance(MyriadConfiguration.class).getServiceConfigurations();
-      if (auxServicesConfigs != null) {
-        for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
+      if (servicesConfigs != null) {
+        for (Map.Entry<String, ServiceConfiguration> entry : servicesConfigs.entrySet()) {
           final String taskPrefix = entry.getKey();
           ServiceConfiguration config = entry.getValue();
           final Double cpu = config.getCpus().or(ServiceConfiguration.DEFAULT_CPU);

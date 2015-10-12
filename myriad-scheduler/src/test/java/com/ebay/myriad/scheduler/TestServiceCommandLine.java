@@ -55,7 +55,7 @@ public class TestServiceCommandLine {
     Long [] ports = new Long [] {1L, 2L, 3L, 4L};
     NMPorts nmPorts = new NMPorts(ports);
     
-    ServiceResourceProfile profile = new ExtendedResourceProfile(new NMProfile("nm", 10.0, 15.0), 3.0, 5.0);
+    ServiceResourceProfile profile = new ExtendedResourceProfile(new NMProfile("nm", 10L, 15L), 3.0, 5.0);
     
     ExecutorCommandLineGenerator clGenerator = new DownloadNMExecutorCLGenImpl(cfg, "hdfs://namenode:port/dist/hadoop-2.5.0.tar.gz");
     NMTaskFactoryImpl nms = new NMTaskFactoryImpl(cfg, null, clGenerator);

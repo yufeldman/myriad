@@ -95,7 +95,7 @@ public class ServiceTaskFactoryImpl implements TaskFactory {
         strB.append("-D" + YARN_RESOURCEMANAGER_HOSTNAME + "=" + rmHostName + " ");
       }
       
-      Map<String, Long> ports = serviceConfig.getPorts();
+      Map<String, Long> ports = serviceConfig.getPorts().orNull();
       if (ports != null && !ports.isEmpty()) {
         int neededPortsCount = 0;
         for (Map.Entry<String, Long> portEntry : ports.entrySet()) {

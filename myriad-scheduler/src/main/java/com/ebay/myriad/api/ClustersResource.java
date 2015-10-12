@@ -111,18 +111,18 @@ public class ClustersResource {
       LOGGER.info("Received Flexup a Service Request");
 
       Integer instances = request.getInstances();
-      String profile = request.getServiceName();
+      String serviceName = request.getServiceName();
 
       LOGGER.info("Instances: {}", instances);
-      LOGGER.info("Profile: {}", profile);
+      LOGGER.info("Service: {}", serviceName);
       
       // Validate profile request
       Response.ResponseBuilder response = Response.status(Response.Status.ACCEPTED);
       
-      if (cfg.getServiceConfiguration(profile) == null) {
+      if (cfg.getServiceConfiguration(serviceName) == null) {
         response.status(Response.Status.BAD_REQUEST)
-                .entity("Service does not exist: " + profile);
-        LOGGER.error("Provided service does not exist " + profile);
+                .entity("Service does not exist: " + serviceName);
+        LOGGER.error("Provided service does not exist " + serviceName);
         return response.build();
       }
       
@@ -134,10 +134,11 @@ public class ClustersResource {
       }
 
       try {
-        this.myriadOperations.flexUpAService(instances, profile);
+        this.myriadOperations.flexUpAService(instances, serviceName);
       } catch (MyriadBadConfigurationException e) {
         return response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
       }
+
       return response.build();
     }
 
@@ -218,11 +219,7 @@ public class ClustersResource {
           LOGGER.warn("Requested number of instances greater than available: {} < {}", flexibleInstances, instances);
       }
 
-      try {
-        this.myriadOperations.flexDownAService(instances, serviceName);
-      } catch (MyriadBadConfigurationException e) {
-        return response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-      }
+      this.myriadOperations.flexDownAService(instances, serviceName);
       return response.build();
     }
 }

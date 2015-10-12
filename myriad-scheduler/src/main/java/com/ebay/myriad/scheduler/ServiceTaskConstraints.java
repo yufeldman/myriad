@@ -23,8 +23,8 @@ public class ServiceTaskConstraints implements TaskConstraints {
     }
     ServiceConfiguration serviceConfig = auxConfigs.get(taskPrefix);
     if (serviceConfig != null) {
-      if (serviceConfig.getPorts() != null) {
-        this.portsCount = serviceConfig.getPorts().size();
+      if (serviceConfig.getPorts().isPresent() ) {
+        this.portsCount = serviceConfig.getPorts().get().size();
       }
     }
   }

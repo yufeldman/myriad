@@ -54,7 +54,7 @@ public class TestTaskUtils {
   public void testGetResource() {
     TaskUtils taskUtils = new TaskUtils(cfg);
     
-    NMProfile fooProfile = new NMProfile("abc", 0.5, 1000.0);
+    NMProfile fooProfile = new NMProfile("abc", 1L, 1000L);
     try {
       taskUtils.getAuxTaskCpus(fooProfile, "foo");
       fail("Should not complete sucessfully for foo");
@@ -85,7 +85,7 @@ public class TestTaskUtils {
     assertTrue(processedProfile.getClass().equals(ServiceResourceProfile.class));
     assertTrue(processedProfile.toString().equalsIgnoreCase(parentStr));
     
-    ServiceResourceProfile childProfile = new ExtendedResourceProfile(new NMProfile("bcd", 5.0, 15.0), 2.0, 7.0);
+    ServiceResourceProfile childProfile = new ExtendedResourceProfile(new NMProfile("bcd", 5L, 15L), 2.0, 7.0);
     
     String childStr = gson.toJson(childProfile);
     ServiceResourceProfile processedChildProfile = gson.fromJson(childStr, ServiceResourceProfile.class);

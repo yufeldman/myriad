@@ -28,7 +28,6 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.mesos.Protos;
 
-import com.ebay.myriad.scheduler.NMProfile;
 import com.ebay.myriad.scheduler.ServiceResourceProfile;
 import com.ebay.myriad.state.NodeTask;
 import com.google.gson.Gson;
@@ -43,8 +42,9 @@ public class ByteBufferSupport {
   public static final int INT_SIZE = Integer.SIZE / Byte.SIZE;
   public static final String UTF8 = "UTF-8";
   public static final byte[] ZERO_BYTES = new byte[0];
-  private static Gson gson = new Gson();
-  private static Gson gsonCustom = new GsonBuilder().registerTypeAdapter(ServiceResourceProfile.class, new ServiceResourceProfile.CustomDeserializer()).create();
+  private static Gson gsonCustom = new GsonBuilder().
+      registerTypeAdapter(ServiceResourceProfile.class, new ServiceResourceProfile.CustomDeserializer()).
+      create();
   
   public static void addByteBuffers(List<ByteBuffer> list,
     ByteArrayOutputStream bytes) throws IOException {
@@ -261,15 +261,6 @@ public class ByteBufferSupport {
       return s.getBytes(UTF8);
     } catch (Exception e) {
       return ZERO_BYTES;
-    }
-  }
-
-  public static NMProfile getProfile(ByteBuffer bb) {
-    String p = toString(bb);
-    if (!StringUtils.isEmpty(p)) {
-      return gson.fromJson(p, NMProfile.class);
-    } else {
-      return null;
     }
   }
 

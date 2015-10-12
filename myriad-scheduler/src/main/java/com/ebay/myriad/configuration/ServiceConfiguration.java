@@ -20,6 +20,7 @@ package com.ebay.myriad.configuration;
 
 import java.util.Map;
 
+import org.hibernate.validator.constraints.NotEmpty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,7 @@ public class ServiceConfiguration {
 
   public static final Double DEFAULT_CPU = 0.1;
   
-  public static final Double DEFAULT_MEMORY = 16.0;
+  public static final Double DEFAULT_MEMORY = 256.0;
   
   /**
    * Translates to -Xmx for the JVM.
@@ -71,6 +72,7 @@ public class ServiceConfiguration {
   protected String envSettings;
   
   @JsonProperty
+  @NotEmpty
   protected String taskName;
   
   @JsonProperty
@@ -111,8 +113,8 @@ public class ServiceConfiguration {
     return envSettings;
   }
   
-  public Map<String, Long> getPorts() {
-    return ports;
+  public Optional<Map<String, Long>> getPorts() {
+    return Optional.fromNullable(ports);
   }
   
   public Optional<Integer> getMaxInstances() {

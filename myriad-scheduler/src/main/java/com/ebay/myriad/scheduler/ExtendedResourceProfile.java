@@ -39,12 +39,12 @@ public class ExtendedResourceProfile extends ServiceResourceProfile {
 
   @Override
   public Double getCpus() {
-    return childProfile.getCpus();
+    return childProfile.getCpus().doubleValue();
   }
 
   @Override
   public Double getMemory() {
-    return childProfile.getMemory();
+    return childProfile.getMemory().doubleValue();
   }
 
   @Override
