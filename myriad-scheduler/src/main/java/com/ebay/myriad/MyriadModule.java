@@ -108,7 +108,7 @@ public class MyriadModule extends AbstractModule {
         Map<String, ServiceConfiguration> auxServicesConfigs = cfg.getServiceConfigurations();
         if (auxServicesConfigs != null) {
           for (Map.Entry<String, ServiceConfiguration> entry : auxServicesConfigs.entrySet()) {
-            String taskFactoryClass = entry.getValue().getTaskFactoryImplName();
+            String taskFactoryClass = entry.getValue().getTaskFactoryImplName().orNull();
             if (taskFactoryClass != null) {
               try {
                 Class<? extends TaskFactory> implClass = (Class<? extends TaskFactory>) Class.forName(taskFactoryClass);

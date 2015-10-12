@@ -105,8 +105,8 @@ public class ServiceConfiguration {
     this.taskName = taskName;
   }
 
-  public String getTaskFactoryImplName() {
-    return taskFactoryImplName;
+  public Optional<String> getTaskFactoryImplName() {
+    return Optional.fromNullable(taskFactoryImplName);
   }
 
   public String getEnvSettings() {
@@ -121,8 +121,8 @@ public class ServiceConfiguration {
     return Optional.fromNullable(maxInstances);
   }
 
-  public String getCommand() {
-    return command;
+  public Optional<String> getCommand() {
+    return Optional.fromNullable(command);
   }
 
   public String getServiceOpts() {

@@ -96,28 +96,32 @@ public class ResourceOffersEventHandler implements EventHandler<ResourceOffersEv
             if (matches(offer, taskToLaunch)
                 && SchedulerUtils.isUniqueHostname(offer, taskToLaunch,
                 schedulerState.getActiveTasks())) {
-              final TaskInfo task = 
-                    taskFactoryMap.get(taskPrefix).createTask(offer, schedulerState.getFrameworkID(), pendingTaskId,
-                    taskToLaunch);
-              List<OfferID> offerIds = new ArrayList<>();
-              offerIds.add(offer.getId());
-              List<TaskInfo> tasks = new ArrayList<>();
-              tasks.add(task);
-              LOGGER.info("Launching task: {} using offer: {}", task.getTaskId().getValue(), offer.getId());
-              LOGGER.debug("Launching task: {} with profile: {} using offer: {}", task, profile, offer);
-              driver.launchTasks(offerIds, tasks);
-              schedulerState.makeTaskStaging(pendingTaskId);
-
-              // For every NM Task that we launch, we currently
-              // need to backup the ExecutorInfo for that NM Task in the State Store.
-              // Without this, we will not be able to launch tasks corresponding to yarn
-              // containers. This is specially important in case the RM restarts.
-              taskToLaunch.setExecutorInfo(task.getExecutor());
-              taskToLaunch.setHostname(offer.getHostname());
-              taskToLaunch.setSlaveId(offer.getSlaveId());
-              schedulerState.addTask(pendingTaskId, taskToLaunch);
-              iterator.remove(); // remove the used offer from offers list
-              break;
+              try {
+                final TaskInfo task = 
+                      taskFactoryMap.get(taskPrefix).createTask(offer, schedulerState.getFrameworkID(), pendingTaskId,
+                      taskToLaunch);
+                List<OfferID> offerIds = new ArrayList<>();
+                offerIds.add(offer.getId());
+                List<TaskInfo> tasks = new ArrayList<>();
+                tasks.add(task);
+                LOGGER.info("Launching task: {} using offer: {}", task.getTaskId().getValue(), offer.getId());
+                LOGGER.debug("Launching task: {} with profile: {} using offer: {}", task, profile, offer);
+                driver.launchTasks(offerIds, tasks);
+                schedulerState.makeTaskStaging(pendingTaskId);
+  
+                // For every NM Task that we launch, we currently
+                // need to backup the ExecutorInfo for that NM Task in the State Store.
+                // Without this, we will not be able to launch tasks corresponding to yarn
+                // containers. This is specially important in case the RM restarts.
+                taskToLaunch.setExecutorInfo(task.getExecutor());
+                taskToLaunch.setHostname(offer.getHostname());
+                taskToLaunch.setSlaveId(offer.getSlaveId());
+                schedulerState.addTask(pendingTaskId, taskToLaunch);
+                iterator.remove(); // remove the used offer from offers list
+                break;
+              } catch (Throwable t) {
+                LOGGER.error("Exception thrown while trying to create a task for {}", taskPrefix, t);
+              }
             }
           }
         }

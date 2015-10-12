@@ -77,9 +77,8 @@ public class ServiceTaskFactoryImpl implements TaskFactory {
     ServiceConfiguration serviceConfig = 
         cfg.getServiceConfiguration(nodeTask.getTaskPrefix());
     
-    if (serviceConfig == null) {
-      return null;
-    }
+    Objects.requireNonNull(serviceConfig, "ServiceConfig should be non-null");
+    Objects.requireNonNull(serviceConfig.getCommand().orNull(), "command for ServiceConfig should be non-null");
     
     final String serviceHostName = "0.0.0.0";
     final String serviceEnv = serviceConfig.getEnvSettings();
@@ -122,7 +121,7 @@ public class ServiceTaskFactoryImpl implements TaskFactory {
     }
 
     strB.append(" ");
-    strB.append(serviceConfig.getCommand());
+    strB.append(serviceConfig.getCommand().get());
     
     CommandInfo commandInfo = createCommandInfo(nodeTask.getProfile(), strB.toString());
 
@@ -172,14 +171,18 @@ public class ServiceTaskFactoryImpl implements TaskFactory {
   CommandInfo createCommandInfo(ServiceResourceProfile profile, String executorCmd) {
     MyriadExecutorConfiguration myriadExecutorConfiguration = cfg.getMyriadExecutorConfiguration();
     CommandInfo.Builder commandInfo = CommandInfo.newBuilder();
-    String yarnHomeEnv = cfg.getYarnEnvironment().get("YARN_HOME");
-    org.apache.mesos.Protos.Environment.Variable.Builder yarnEnvB = 
-        org.apache.mesos.Protos.Environment.Variable.newBuilder();
-    yarnEnvB.setName("YARN_HOME").setValue(yarnHomeEnv);
-    org.apache.mesos.Protos.Environment.Builder yarnHomeB = 
-        org.apache.mesos.Protos.Environment.newBuilder();
-    yarnHomeB.addVariables(yarnEnvB.build());
-    commandInfo.mergeEnvironment(yarnHomeB.build());
+    Map<String, String> envVars = cfg.getYarnEnvironment();
+    if (envVars != null && !envVars.isEmpty()) {
+      org.apache.mesos.Protos.Environment.Builder yarnHomeB = 
+          org.apache.mesos.Protos.Environment.newBuilder();
+      for (Map.Entry<String, String> envEntry : envVars.entrySet()) {
+        org.apache.mesos.Protos.Environment.Variable.Builder yarnEnvB = 
+            org.apache.mesos.Protos.Environment.Variable.newBuilder();
+        yarnEnvB.setName(envEntry.getKey()).setValue(envEntry.getValue());
+        yarnHomeB.addVariables(yarnEnvB.build());
+      }
+      commandInfo.mergeEnvironment(yarnHomeB.build());
+    }
 
     if (myriadExecutorConfiguration.getNodeManagerUri().isPresent()) {
       //Both FrameworkUser and FrameworkSuperuser to get all of the directory permissions correct.
