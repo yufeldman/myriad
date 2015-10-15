@@ -15,26 +15,16 @@
  */
 package com.ebay.myriad.state;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
+import com.ebay.myriad.scheduler.NMProfile;
+import com.ebay.myriad.state.utils.StoreContext;
 import org.apache.commons.collections.CollectionUtils;
-
+import org.apache.mesos.Protos;
+import org.apache.mesos.Protos.SlaveID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.mesos.Protos;
-import org.apache.mesos.Protos.SlaveID;
-
-import com.ebay.myriad.state.utils.StoreContext;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Represents the state of the Myriad scheduler
@@ -174,6 +164,17 @@ public class SchedulerState {
         return Collections.unmodifiableSet(this.pendingTasks);
     }
 
+    public synchronized Collection<Protos.TaskID> getPendingTaskIDsForProfile(NMProfile profile) {
+      List<Protos.TaskID> pendingTaskIds = new ArrayList<>();
+      for (Map.Entry<Protos.TaskID, NodeTask> entry : tasks.entrySet()) {
+        NodeTask nodeTask = entry.getValue();
+        if (pendingTasks.contains(entry.getKey()) && nodeTask.getProfile().getName().equals(profile.getName())) {
+          pendingTaskIds.add(entry.getKey());
+        }
+      }
+      return Collections.unmodifiableCollection(pendingTaskIds);
+    }
+
     public synchronized Set<Protos.TaskID> getActiveTaskIds() {
         return Collections.unmodifiableSet(this.activeTasks);
     }
@@ -191,7 +192,21 @@ public class SchedulerState {
         return Collections.unmodifiableCollection(activeNodeTasks);
     }
 
-    // TODO (sdaingade) Clone NodeTask
+    public synchronized Collection<Protos.TaskID> getActiveTaskIDsForProfile(NMProfile profile) {
+      List<Protos.TaskID> activeTaskIDs = new ArrayList<>();
+      if (CollectionUtils.isNotEmpty(activeTasks)
+          && CollectionUtils.isNotEmpty(tasks.values())) {
+        for (Map.Entry<Protos.TaskID, NodeTask> entry : tasks.entrySet()) {
+          NodeTask nodeTask = entry.getValue();
+          if (activeTasks.contains(entry.getKey()) && nodeTask.getProfile().getName().equals(profile.getName())) {
+            activeTaskIDs.add(entry.getKey());
+          }
+        }
+      }
+      return Collections.unmodifiableCollection(activeTaskIDs);
+    }
+
+  // TODO (sdaingade) Clone NodeTask
     public synchronized NodeTask getNodeTask(SlaveID slaveId) {
         for (Map.Entry<Protos.TaskID, NodeTask> entry : tasks.entrySet()) {
             if (entry.getValue().getSlaveId() != null &&
@@ -206,7 +221,18 @@ public class SchedulerState {
         return Collections.unmodifiableSet(this.stagingTasks);
     }
 
-    public synchronized Set<Protos.TaskID> getLostTaskIds() {
+    public synchronized Collection<Protos.TaskID> getStagingTaskIDsForProfile(NMProfile profile) {
+      List<Protos.TaskID> stagingTaskIDs = new ArrayList<>();
+      for (Map.Entry<Protos.TaskID, NodeTask> entry : tasks.entrySet()) {
+        NodeTask nodeTask = entry.getValue();
+        if (stagingTasks.contains(entry.getKey()) && nodeTask.getProfile().getName().equals(profile.getName())) {
+          stagingTaskIDs.add(entry.getKey());
+        }
+      }
+      return Collections.unmodifiableCollection(stagingTaskIDs);
+    }
+
+  public synchronized Set<Protos.TaskID> getLostTaskIds() {
         return Collections.unmodifiableSet(this.lostTasks);
     }
 
