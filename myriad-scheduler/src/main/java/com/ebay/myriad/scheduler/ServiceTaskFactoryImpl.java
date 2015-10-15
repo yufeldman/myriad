@@ -56,6 +56,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class ServiceTaskFactoryImpl implements TaskFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(ServiceTaskFactoryImpl.class);
     
+  public static final long DEFAULT_PORT_NUMBER = 0;
+  
   private MyriadConfiguration cfg;
   @SuppressWarnings("unused")
   private TaskUtils taskUtils;
@@ -99,7 +101,7 @@ public class ServiceTaskFactoryImpl implements TaskFactory {
         int neededPortsCount = 0;
         for (Map.Entry<String, Long> portEntry : ports.entrySet()) {
           Long port = portEntry.getValue();
-          if (port == -1) {
+          if (port == DEFAULT_PORT_NUMBER) {
             neededPortsCount++;
           }
         }
@@ -110,7 +112,7 @@ public class ServiceTaskFactoryImpl implements TaskFactory {
         for (Map.Entry<String, Long> portEntry : ports.entrySet()) {
           String portProperty = portEntry.getKey();
           Long port = portEntry.getValue();
-          if (port == -1) {
+          if (port == DEFAULT_PORT_NUMBER) {
             port = additionalPortsNumbers.get(index++);
           }
           strB.append("-D" + portProperty + "=" + serviceHostName + ":" + port + " ");
